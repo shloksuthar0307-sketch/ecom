@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Lookbook Builder: {{ lookbook.title }}</h1>
+            <p class="text-sm text-gray-500">Click anywhere on the image to add a product hotspot.</p>
+        </div>
+        <a href="{% url 'lookbook:detail' lookbook.slug %}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">View Lookbook</a>
+    </div>
+
+    <!-- Image Container -->
+    <div class="relative inline-block border shadow-lg" id="image-container" style="cursor: crosshair;">
+        <img src="{{ lookbook.hero_image.url }}" alt="{{ lookbook.title }}" id="hero-image" class="block max-w-full h-auto">
+        
+        <!-- Hotspots will be rendered here -->
+        <div id="hotspots-layer">
+            {% for item in lookbook.items.all %}
+            <div class="absolute w-6 h-6 -ml-3 -mt-3 bg-white rounded-full shadow-md flex items-center justify-center cursor-pointer border-2 border-indigo-500 hotspot-marker transition-transform hover:scale-110"
+                 style="left: {{ item.x_position }}%; top: {{ item.y_position }}%;"
+                 data-item-id="{{ item.id }}"
+                 data-product-id="{{ item.product.id }}"
+                 data-product-name="{{ item.product.name }}">
+                <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Drawer -->
+<div id="product-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" id="modal-overlay"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+            <div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                    Assign Product to Hotspot
+                </h3>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-500 mb-4">Search and select a product to link to this point on the image.</p>
+                    
+                    <input type="hidden" id="hotspot-x">
+                    <input type="hidden" id="hotspot-y">
+                    <input type="hidden" id="hotspot-item-id">
+                    
+                    <div class="mb-4">
+                        <label for="product-search" class="block text-sm font-medium text-gray-700">Search Products</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <input type="text" name="product-search" id="product-search" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="Type to search...">
+                        </div>
+                    </div>
+                    
+                    <div id="search-results" class="max-h-48 overflow-y-auto mb-4 border rounded-md divide-y divide-gray-200 hidden">
+                        <!-- Results go here -->
+                    </div>
+                    
+                    <div id="selected-product-info" class="p-3 bg-indigo-50 border border-indigo-200 rounded-md hidden">
+                        <span class="text-sm font-medium text-indigo-800">Selected:</span>
+                        <span id="selected-product-name" class="ml-2 text-sm text-indigo-700"></span>
+                        <input type="hidden" id="selected-product-id">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="save-hotspot" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Save
+                </button>
+                <button type="button" id="delete-hotspot" class="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm hidden">
+                    Delete
+                </button>
+                <button type="button" id="cancel-modal" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const imageContainer = document.getElementById('image-container');
+        const img = document.getElementById('hero-image');
+        const modal = document.getElementById('product-modal');
+        const overlay = document.getElementById('modal-overlay');
+        const cancelBtn = document.getElementById('cancel-modal');
+        const saveBtn = document.getElementById('save-hotspot');
+        const deleteBtn = document.getElementById('delete-hotspot');
+        const searchInput = document.getElementById('product-search');
+        const searchResults = document.getElementById('search-results');
+        const selectedInfo = document.getElementById('selected-product-info');
+        
+        let searchTimeout;
+        
+        // Open modal
+        function openModal(x, y, itemId = null, productId = null, productName = null) {
+            document.getElementById('hotspot-x').value = x;
+            document.getElementById('hotspot-y').value = y;
+            document.getElementById('hotspot-item-id').value = itemId || '';
+            
+            if (itemId) {
+                deleteBtn.classList.remove('hidden');
+                document.getElementById('selected-product-id').value = productId;
+                document.getElementById('selected-product-name').textContent = productName;
+                selectedInfo.classList.remove('hidden');
+            } else {
+                deleteBtn.classList.add('hidden');
+                document.getElementById('selected-product-id').value = '';
+                document.getElementById('selected-product-name').textContent = '';
+                selectedInfo.classList.add('hidden');
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                searchResults.classList.add('hidden');
+            }
+            
+            modal.classList.remove('hidden');
+            searchInput.focus();
+        }
+        
+        // Close modal
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+        
+        overlay.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Image click handling
+        imageContainer.addEventListener('click', function(e) {
+            // Ignore if clicking on an existing hotspot (handled separately)
+            if (e.target.closest('.hotspot-marker')) return;
+            
+            const rect = img.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const xPercent = (x / rect.width) * 100;
+            const yPercent = (y / rect.height) * 100;
+            
+            if (xPercent >= 0 && xPercent <= 100 && yPercent >= 0 && yPercent <= 100) {
+                openModal(xPercent, yPercent);
+            }
+        });
+        
+        // Existing hotspot click
+        document.getElementById('hotspots-layer').addEventListener('click', function(e) {
+            const marker = e.target.closest('.hotspot-marker');
+            if (marker) {
+                const itemId = marker.dataset.itemId;
+                const productId = marker.dataset.productId;
+                const productName = marker.dataset.productName;
+                // Get x/y from style
+                const x = parseFloat(marker.style.left);
+                const y = parseFloat(marker.style.top);
+                openModal(x, y, itemId, productId, productName);
+            }
+        });
+        
+        // Product search
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                searchResults.innerHTML = '';
+                searchResults.classList.add('hidden');
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`{% url 'lookbook:product_search' %}?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        searchResults.innerHTML = '';
+                        if (data.products.length > 0) {
+                            data.products.forEach(p => {
+                                const div = document.createElement('div');
+                                div.className = 'p-3 hover:bg-gray-50 cursor-pointer text-sm';
+                                div.textContent = `${p.name} - $${p.price}`;
+                                div.onclick = () => {
+                                    document.getElementById('selected-product-id').value = p.id;
+                                    document.getElementById('selected-product-name').textContent = p.name;
+                                    selectedInfo.classList.remove('hidden');
+                                    searchResults.classList.add('hidden');
+                                    searchInput.value = '';
+                                };
+                                searchResults.appendChild(div);
+                            });
+                            searchResults.classList.remove('hidden');
+                        } else {
+                            searchResults.innerHTML = '<div class="p-3 text-sm text-gray-500">No products found.</div>';
+                            searchResults.classList.remove('hidden');
+                        }
+                    });
+            }, 300);
+        });
+        
+        // Helper to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Save hotspot
+        saveBtn.addEventListener('click', function() {
+            const productId = document.getElementById('selected-product-id').value;
+            const x = document.getElementById('hotspot-x').value;
+            const y = document.getElementById('hotspot-y').value;
+            const itemId = document.getElementById('hotspot-item-id').value;
+            
+            if (!productId) {
+                alert('Please select a product.');
+                return;
+            }
+            
+            const payload = {
+                product_id: productId,
+                x_position: x,
+                y_position: y
+            };
+            if (itemId) payload.item_id = itemId;
+            
+            fetch(`{% url 'lookbook:builder_save' lookbook.pk %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.reload(); // Simple reload to show new/updated hotspot
+                } else {
+                    alert('Error saving hotspot: ' + data.error);
+                }
+            });
+        });
+        
+        // Delete hotspot
+        deleteBtn.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to delete this hotspot?')) return;
+            
+            const itemId = document.getElementById('hotspot-item-id').value;
+            if (!itemId) return;
+            
+            fetch(`{% url 'lookbook:builder_save' lookbook.pk %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    item_id: itemId,
+                    delete: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'deleted') {
+                    window.location.reload();
+                } else {
+                    alert('Error deleting hotspot.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

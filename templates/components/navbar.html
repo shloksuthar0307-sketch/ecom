@@ -1,0 +1,192 @@
+<header class="navbar-wrapper amazon-style">
+    <div class="navbar-top" style="padding: 0.5rem 2rem;">
+        <div class="nav-brand" style="display: flex; align-items: center; gap: 1rem;">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Menu">
+                <i class="ph ph-list"></i>
+            </button>
+            <a href="/">
+                <span class="brand-text">AEON</span>
+            </a>
+        </div>
+        
+        <!-- Center Search Bar -->
+        <div class="nav-search-bar">
+            <form action="/search/" method="get" class="search-form-inline" id="main-search-form">
+                <input type="text" name="q" id="search-input" placeholder="Search products, brands, categories..." autocomplete="off">
+                <button type="button" id="voice-search-btn" class="voice-search-btn" title="Search by Voice" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); padding: 0 10px;">
+                    <i class="ph ph-microphone" style="font-size: 1.2rem;"></i>
+                </button>
+                <button type="submit" class="search-btn-inline"><i class="ph ph-magnifying-glass"></i></button>
+            </form>
+            <div class="search-suggestions" id="search-suggestions">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const voiceBtn = document.getElementById('voice-search-btn');
+                const searchInput = document.getElementById('search-input');
+                const searchForm = document.getElementById('main-search-form');
+
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+
+                    voiceBtn.addEventListener('click', () => {
+                        voiceBtn.style.color = 'red';
+                        recognition.start();
+                    });
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        searchInput.value = transcript;
+                        voiceBtn.style.color = 'var(--text-secondary)';
+                        // Submit to AI search endpoint
+                        searchForm.action = '/ai/ai-search/';
+                        searchForm.submit();
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.error('Speech recognition error', event.error);
+                        voiceBtn.style.color = 'var(--text-secondary)';
+                    };
+
+                    recognition.onend = () => {
+                        voiceBtn.style.color = 'var(--text-secondary)';
+                    };
+                } else {
+                    voiceBtn.style.display = 'none';
+                    console.log("Speech recognition not supported in this browser.");
+                }
+            });
+        </script>
+
+        <div class="nav-actions">
+            <!-- Account -->
+            <div class="user-dropdown-wrapper">
+                <a href="{% if user.is_authenticated %}/account/{% else %}{% url 'login' %}{% endif %}" class="action-btn user-btn premium-user-btn" aria-label="Profile">
+                    <div class="icon-wrap" style="position: relative;">
+                        <i class="ph ph-user" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <strong style="font-size: 0.9rem; margin-left: 0.5rem;">Profile</strong>
+                </a>
+                
+                <div class="dropdown-menu premium-dropdown">
+                    {% if user.is_authenticated %}
+                        <div class="dropdown-header">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Account</span>
+                            <strong style="display: block; font-size: 1.1rem; margin-top: 0.2rem;">Hello, {{ user.first_name|default:user.username }}</strong>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ user.email }}</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="/account/" class="dropdown-item"><i class="ph ph-user-circle"></i> My Account</a>
+                        <a href="/account/orders/" class="dropdown-item"><i class="ph ph-package"></i> My Orders</a>
+                        <a href="{% url 'wishlist_detail' %}" class="dropdown-item"><i class="ph ph-heart"></i> Wishlist</a>
+                        <a href="/account/addresses/" class="dropdown-item"><i class="ph ph-map-pin"></i> Saved Addresses</a>
+                        {% if user.is_staff %}
+                        <div class="dropdown-divider"></div>
+                        <a href="/dashboard/" class="dropdown-item"><i class="ph ph-gauge"></i> Admin Dashboard</a>
+                        {% endif %}
+                        <div class="dropdown-divider"></div>
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item" style="width: 100%; text-align: left; background: none; border: none; font-family: inherit; font-size: inherit; cursor: pointer; color: inherit; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 0.75rem;"><i class="ph ph-sign-out"></i> Sign Out</button>
+                        </form>
+                    {% else %}
+                        <div class="dropdown-header" style="text-align: center; padding: 1.5rem 1rem;">
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.5rem;">Welcome to AEON</strong>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 1rem;">Sign in to your account</span>
+                            <a href="{% url 'login' %}" class="btn btn-primary" style="width: 100%; display: block; margin-bottom: 1rem;">Sign In</a>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">New to AEON? <a href="{% url 'register' %}" style="color: var(--text-color); font-weight: 500; text-decoration: underline;">Create Account</a></span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <a href="/wishlist/" class="action-btn" aria-label="Wishlist">
+                <div class="icon-wrap" style="position: relative;">
+                    <i class="ph ph-heart" style="font-size: 1.5rem;"></i>
+                    <span class="badge" id="wishlist-count">{{ wishlist_count }}</span>
+                </div>
+                <strong style="font-size: 0.9rem; margin-left: 0.5rem;">Wishlist</strong>
+            </a>
+            
+            <a href="/cart/" class="action-btn" aria-label="Cart">
+                <div class="icon-wrap" style="position: relative;">
+                    <i class="ph ph-shopping-cart-simple" style="font-size: 1.5rem;"></i>
+                    <span class="badge" id="cart-count">{{ cart|length }}</span>
+                </div>
+                <strong style="font-size: 0.9rem; margin-left: 0.5rem;">Cart</strong>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Bottom Navbar (Menu Bar) -->
+    <div class="navbar-bottom" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+        <div class="nav-links" style="display: flex; gap: 1rem; align-items: center; padding: 0.2rem 2rem;">
+            <a href="#" class="nav-link" style="display: flex; align-items: center; padding: 0.5rem; font-weight: 600;"><i class="ph ph-list" style="margin-right: 0.5rem; font-size: 1.2rem;"></i> All</a>
+            
+            {% for root in mega_menu_categories %}
+            <div class="nav-item-dropdown">
+                <a href="{% url 'category_detail' root.slug %}" class="nav-link" style="padding: 0.5rem;">{{ root.name }}</a>
+                
+                {% if root.children.exists %}
+                <div class="mega-menu">
+                    <div class="mega-menu-inner">
+                        {% for sub in root.children.all %}
+                            {% if sub.is_active %}
+                            <div class="mega-menu-column">
+                                <a href="{% url 'subcategory_detail' root.slug sub.slug %}" class="mega-menu-title">{{ sub.name }}</a>
+                                <ul class="mega-menu-list">
+                                    {% for child in sub.children.all %}
+                                        {% if child.is_active %}
+                                        <li><a href="{% url 'child_category_detail' root.slug sub.slug child.slug %}">{{ child.name }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <a href="/shop/" class="nav-link" style="padding: 0.5rem;">Shop</a>
+            <a href="/about/" class="nav-link" style="padding: 0.5rem;">About</a>
+        </div>
+    </div>
+</header>
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu-overlay" id="mobile-menu-overlay">
+    <div class="mobile-menu-drawer">
+        <div class="mobile-menu-header">
+            <span class="brand-text">AEON</span>
+            <button class="close-mobile-menu" id="close-mobile-menu"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="mobile-menu-body">
+            <a href="/" class="mobile-nav-link">Home</a>
+            <a href="{% url 'category_list' %}" class="mobile-nav-link">Shop</a>
+            <div class="mobile-nav-divider"></div>
+            <h4 class="mobile-nav-title">Categories</h4>
+            {% for root in mega_menu_categories %}
+                <a href="{% url 'category_detail' root.slug %}" class="mobile-nav-link">{{ root.name }}</a>
+            {% endfor %}
+            <div class="mobile-nav-divider"></div>
+            {% if user.is_authenticated %}
+                <a href="/account/" class="mobile-nav-link">My Account</a>
+                <a href="/account/orders/" class="mobile-nav-link">My Orders</a>
+                <form action="{% url 'logout' %}" method="post" style="margin-top: 1rem;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn" style="width: 100%;">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn" style="width: 100%; text-align: center;">Sign In</a>
+            {% endif %}
+        </div>
+    </div>
+</div>

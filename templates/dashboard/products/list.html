@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Product Management | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{% url 'custom_dashboard' %}" style="color: var(--text-secondary);"><i class="ph ph-arrow-left" style="font-size: 1.5rem;"></i></a>
+            <h1 style="margin: 0;">Product Management</h1>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'dashboard_category_list' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Categories</a>
+            <a href="{% url 'add_product' %}" class="btn">Add Product</a>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 2rem;">
+        <form method="GET" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <input type="text" name="q" placeholder="Search by name, SKU, brand..." value="{{ query }}" style="flex: 1; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #fff;">
+            
+            <select name="status" style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #fff;">
+                <option value="">All Statuses</option>
+                <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
+            </select>
+            
+            <select name="category" style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #fff;">
+                <option value="">All Categories</option>
+                {% for cat in root_categories %}
+                <option value="{{ cat.id }}" {% if category_id == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'dashboard_products' %}" class="btn">Clear</a>
+        </form>
+    </div>
+
+    <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <th style="padding: 1rem;">Image</th>
+                    <th style="padding: 1rem;">Name</th>
+                    <th style="padding: 1rem;">SKU</th>
+                    <th style="padding: 1rem;">Hierarchy</th>
+                    <th style="padding: 1rem;">Price</th>
+                    <th style="padding: 1rem;">Stock</th>
+                    <th style="padding: 1rem;">Status</th>
+                    <th style="padding: 1rem;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 1rem;">
+                        {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                        {% else %}
+                        <div style="width: 40px; height: 40px; background: #e5e5e5; border-radius: 4px;"></div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem; font-weight: 500;">{{ product.name }}</td>
+                    <td style="padding: 1rem; color: var(--text-secondary);">{{ product.sku }}</td>
+                    <td style="padding: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                        {% with ancestors=product.category.get_ancestors %}
+                            {% for ancestor in ancestors %}
+                                {{ ancestor.name }} >
+                            {% endfor %}
+                            <strong>{{ product.category.name }}</strong>
+                        {% endwith %}
+                    </td>
+                    <td style="padding: 1rem;">${{ product.price }}</td>
+                    <td style="padding: 1rem;">
+                        {% if product.stock_quantity <= product.low_stock_threshold %}
+                            <span style="color: #ef4444; font-weight: 600;">{{ product.stock_quantity }}</span>
+                        {% else %}
+                            <span style="color: #10b981;">{{ product.stock_quantity }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: {% if product.status == 'published' %}#d1fae5; color: #065f46;{% else %}#f3f4f6; color: #374151;{% endif %}">
+                            {{ product.get_status_display }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem; display: flex; gap: 0.5rem;">
+                        <a href="{% url 'product_detail' product.slug %}" target="_blank" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</a>
+                        <a href="/admin/products/product/{{ product.id }}/change/" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No products found matching your criteria.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <div class="pagination" style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if products.has_previous %}
+            <a href="?page={{ products.previous_page_number }}&q={{ query }}&status={{ status_filter }}&category={{ category_id }}" class="btn">&laquo;</a>
+        {% endif %}
+        
+        <span class="btn" style="background: var(--text-color); color: #fff;">{{ products.number }}</span>
+        
+        {% if products.has_next %}
+            <a href="?page={{ products.next_page_number }}&q={{ query }}&status={{ status_filter }}&category={{ category_id }}" class="btn">&raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

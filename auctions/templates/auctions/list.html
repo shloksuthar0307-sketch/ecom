@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Live Auctions</h2>
+    {% if live_auctions %}
+    <div class="row">
+        {% for auction in live_auctions %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">LIVE NOW</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ auction.product.name }}</h5>
+                    <p class="card-text">Current Bid: ${{ auction.highest_bid }}</p>
+                    <p class="card-text"><small class="text-muted">Ends at {{ auction.end_time|date:"H:i M d" }}</small></p>
+                    <a href="{% url 'auction_detail' auction.id %}" class="btn btn-outline-danger">Join Auction</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No live auctions right now.</p>
+    {% endif %}
+
+    <h2 class="mt-5 mb-4">Upcoming Auctions</h2>
+    {% if upcoming_auctions %}
+    <div class="row">
+        {% for auction in upcoming_auctions %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">UPCOMING</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ auction.product.name }}</h5>
+                    <p class="card-text">Starting Price: ${{ auction.starting_price }}</p>
+                    <p class="card-text"><small class="text-muted">Starts at {{ auction.start_time|date:"H:i M d" }}</small></p>
+                    <a href="{% url 'auction_detail' auction.id %}" class="btn btn-outline-secondary">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No upcoming auctions.</p>
+    {% endif %}
+</div>
+{% endblock %}

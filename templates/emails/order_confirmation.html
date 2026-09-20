@@ -1,0 +1,55 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+    <h2>Order Confirmation</h2>
+    <p>Hi {{ user.first_name|default:user.email }},</p>
+    <p>Thank you for your order! We've received your order and are getting it ready to ship.</p>
+    
+    <div style="background: #f9f9f9; padding: 20px; border-radius: 4px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Order #{{ order.order_number }}</h3>
+        <p><strong>Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
+        <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+    </div>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                <th style="padding: 10px 0;">Item</th>
+                <th style="padding: 10px 0; text-align: center;">Qty</th>
+                <th style="padding: 10px 0; text-align: right;">Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px 0;">
+                    {{ item.product_name }}
+                    {% if item.variant_name %}<br><small style="color: #666;">{{ item.variant_name }}</small>{% endif %}
+                </td>
+                <td style="padding: 10px 0; text-align: center;">{{ item.quantity }}</td>
+                <td style="padding: 10px 0; text-align: right;">${{ item.price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" style="padding: 10px 0; text-align: right;"><strong>Subtotal</strong></td>
+                <td style="padding: 10px 0; text-align: right;">${{ order.subtotal }}</td>
+            </tr>
+            {% if order.discount > 0 %}
+            <tr>
+                <td colspan="2" style="padding: 10px 0; text-align: right; color: #10b981;"><strong>Discount</strong></td>
+                <td style="padding: 10px 0; text-align: right; color: #10b981;">-${{ order.discount }}</td>
+            </tr>
+            {% endif %}
+            <tr style="font-size: 1.2em;">
+                <td colspan="2" style="padding: 10px 0; text-align: right;"><strong>Total</strong></td>
+                <td style="padding: 10px 0; text-align: right;"><strong>${{ order.total }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <p>We'll send you another email when your order ships.</p>
+    
+    <a href="{{ site_url }}/account/orders/" class="btn" style="color: #fff;">View Order Details</a>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+    <h2>Welcome to AEON, {{ user.first_name|default:user.email }}!</h2>
+    
+    <p>Thank you for joining AEON. We're thrilled to have you as part of our community.</p>
+    
+    <p>At AEON, we believe in premium quality and minimal design. You can now:</p>
+    <ul>
+        <li>Checkout faster with saved addresses.</li>
+        <li>Track your order history.</li>
+        <li>Save items to your wishlist.</li>
+    </ul>
+    
+    <a href="{{ site_url }}/shop/" class="btn" style="color: #fff;">Explore the Collection</a>
+{% endblock %}

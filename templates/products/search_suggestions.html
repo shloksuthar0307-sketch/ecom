@@ -1,0 +1,32 @@
+{% if products %}
+    <h4 style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Suggested Products</h4>
+    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+        {% for product in products %}
+        <li>
+            <a href="{% url 'product_detail' product.slug %}" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: var(--radius-sm); transition: background var(--transition-smooth);">
+                <div style="width: 40px; height: 40px; border-radius: 4px; overflow: hidden; background: var(--bg-secondary); flex-shrink: 0;">
+                    {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% endif %}
+                </div>
+                <div style="flex-grow: 1;">
+                    <div style="font-weight: 500; color: var(--text-color);">{{ product.name }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ product.brand.name }} &bull; {{ product.category.name }}</div>
+                </div>
+                <div style="font-weight: 600; color: var(--text-color);">
+                    ${% if product.discount_price %}{{ product.discount_price }}{% else %}{{ product.price }}{% endif %}
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <button type="submit" form="search-form" class="btn" style="width: 100%;">View All Results for "{{ query }}"</button>
+    </div>
+{% else %}
+    {% if query %}
+        <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+            <p>No products match "{{ query }}"</p>
+        </div>
+    {% endif %}
+{% endif %}

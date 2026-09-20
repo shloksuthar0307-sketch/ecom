@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}My Wishlist | AEON{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div class="section-header animate-on-scroll">
+        <h1 class="page-title">My Wishlist</h1>
+    </div>
+
+    {% if wishlist.products.exists %}
+    <div class="product-grid animate-on-scroll">
+        {% for product in wishlist.products.all %}
+            {% include 'components/product_card.html' with product=product %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state animate-on-scroll">
+        <i class="ph ph-heart"></i>
+        <h2>Your wishlist is empty</h2>
+        <p>Save items you love here.</p>
+        <a href="{% url 'shop' %}" class="btn btn-primary" style="margin-top: 1rem;">Explore Products</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard | AEON{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div class="section-header animate-on-scroll" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 class="page-title" style="margin: 0;">Admin Dashboard</h1>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'dashboard_products' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Products</a>
+            <a href="{% url 'dashboard_category_list' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Categories</a>
+        </div>
+    </div>
+    
+    <style>
+        .metric-card {
+            background: var(--bg-secondary, #fff);
+            padding: 1.75rem;
+            border-radius: var(--radius-md, 8px);
+            border: 1px solid var(--border-color, #eaeaea);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            cursor: default;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+            border-color: var(--text-color, #111);
+        }
+        .metric-title {
+            color: var(--text-secondary, #666);
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-color, #111);
+            line-height: 1.1;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .chart-card {
+            background: var(--bg-secondary, #fff);
+            padding: 1.5rem;
+            border-radius: var(--radius-md, 8px);
+            border: 1px solid var(--border-color, #eaeaea);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+        .chart-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+        }
+        .chart-title {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-color, #111);
+            border-bottom: 1px solid var(--border-color, #eaeaea);
+            padding-bottom: 0.75rem;
+        }
+        @media (max-width: 992px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- Metrics Grid -->
+    <div class="animate-on-scroll" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div class="metric-card">
+            <div class="metric-title">Total Revenue</div>
+            <div class="metric-value counter-value" data-value="{{ total_revenue|floatformat:0 }}">$0</div>
+        </div>
+        
+        <div class="metric-card" style="transition-delay: 50ms;">
+            <div class="metric-title">Total Orders</div>
+            <div class="metric-value counter-value" data-value="{{ total_orders }}">0</div>
+        </div>
+        
+        <div class="metric-card" style="transition-delay: 100ms;">
+            <div class="metric-title">Total Customers</div>
+            <div class="metric-value counter-value" data-value="{{ total_customers }}">0</div>
+        </div>
+    </div>
+    
+    <!-- Charts Area -->
+    <div class="charts-grid animate-on-scroll" style="animation-delay: 150ms;">
+        <div class="chart-card">
+            <h3 class="chart-title">Revenue Overview (Last 30 Days)</h3>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3 class="chart-title">Top Selling Categories</h3>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 2rem;">
+        <!-- Recent Orders -->
+        <div class="animate-on-scroll" style="animation-delay: 200ms;">
+            <h3 style="margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; font-size: 1.1rem; font-weight: 600;">Recent Orders</h3>
+            {% if recent_orders %}
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color);">
+                            <th style="padding: 0.75rem 0; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Order #</th>
+                            <th style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Customer</th>
+                            <th style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Date</th>
+                            <th style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Status</th>
+                            <th style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;">
+                            <td style="padding: 0.75rem 0; font-weight: 500;">{{ order.order_number }}</td>
+                            <td>{{ order.user.email|default:"Guest" }}</td>
+                            <td style="color: var(--text-secondary);">{{ order.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <span style="display: inline-block; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: var(--bg-secondary); border: 1px solid var(--border-color); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td style="font-weight: 600;">${{ order.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="color: var(--text-secondary);">No orders yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Top Products -->
+        <div class="animate-on-scroll" style="animation-delay: 250ms;">
+            <h3 style="margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; font-size: 1.1rem; font-weight: 600;">Top Products</h3>
+            {% if top_products %}
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for product in top_products %}
+                    <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 44px; height: 44px; border-radius: 6px; background: var(--bg-secondary); overflow: hidden; border: 1px solid var(--border-color);">
+                                {% if product.images.first %}
+                                    <img src="{{ product.images.first.image.url }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                            <div style="font-weight: 500; font-size: 0.95rem;">
+                                {{ product.name }}
+                            </div>
+                        </div>
+                        <div style="font-weight: 600; font-size: 0.85rem; padding: 0.25rem 0.6rem; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                            {{ product.order_count }} sold
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color: var(--text-secondary);">No sales data yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js and Custom Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Counter Animation
+        const counters = document.querySelectorAll('.counter-value');
+        const speed = 200; 
+
+        counters.forEach(counter => {
+            const updateCount = () => {
+                const target = +counter.getAttribute('data-value');
+                const count = +counter.innerText.replace(/[^0-9.-]+/g,"");
+                
+                const inc = target / speed;
+
+                if (count < target) {
+                    let current = count + inc;
+                    if(current > target) current = target;
+                    
+                    if (counter.previousElementSibling.innerText.includes('Revenue')) {
+                        counter.innerText = '$' + Math.ceil(current).toLocaleString();
+                    } else {
+                        counter.innerText = Math.ceil(current).toLocaleString();
+                    }
+                    setTimeout(updateCount, 15);
+                } else {
+                    if (counter.previousElementSibling.innerText.includes('Revenue')) {
+                        counter.innerText = '$' + target.toLocaleString();
+                    } else {
+                        counter.innerText = target.toLocaleString();
+                    }
+                }
+            };
+            
+            if (counter.previousElementSibling.innerText.includes('Revenue')) {
+                counter.innerText = '$0';
+            } else {
+                counter.innerText = '0';
+            }
+            
+            // Intersection Observer to trigger counter when visible
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    updateCount();
+                    observer.disconnect();
+                }
+            });
+            observer.observe(counter);
+        });
+
+        // Fetch Analytics Data and Initialize Charts
+        fetch("{% url 'api_analytics' %}")
+            .then(response => response.json())
+            .then(data => {
+                // Common Chart options
+                Chart.defaults.color = 'var(--text-secondary, #666)';
+                Chart.defaults.font.family = 'inherit';
+                
+                // Revenue Line Chart
+                const revCtx = document.getElementById('revenueChart').getContext('2d');
+                
+                // Create gradient for line chart
+                const revGradient = revCtx.createLinearGradient(0, 0, 0, 300);
+                revGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+                revGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                
+                new Chart(revCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.revenue_trend.labels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: data.revenue_trend.data,
+                            borderColor: '#3b82f6',
+                            backgroundColor: revGradient,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#3b82f6',
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                padding: 12,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { size: 13, weight: 'normal' },
+                                bodyFont: { size: 14, weight: 'bold' },
+                                callbacks: {
+                                    label: function(context) {
+                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                border: { display: false },
+                                grid: {
+                                    color: 'rgba(150, 150, 150, 0.1)',
+                                },
+                                ticks: {
+                                    maxTicksLimit: 6,
+                                    callback: function(value) {
+                                        if (value >= 1000) {
+                                            return '$' + (value / 1000).toFixed(1) + 'k';
+                                        }
+                                        return '$' + value;
+                                    }
+                                }
+                            },
+                            x: {
+                                border: { display: false },
+                                grid: {
+                                    display: false,
+                                },
+                                ticks: {
+                                    maxTicksLimit: 8,
+                                    maxRotation: 0
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+
+                // Top Categories Doughnut Chart
+                const catCtx = document.getElementById('categoryChart').getContext('2d');
+                new Chart(catCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.top_categories.labels,
+                        datasets: [{
+                            data: data.top_categories.data,
+                            backgroundColor: [
+                                '#111111',
+                                '#3b82f6',
+                                '#10b981',
+                                '#f59e0b',
+                                '#ef4444'
+                            ],
+                            borderWidth: 2,
+                            borderColor: 'var(--bg-primary, #fff)',
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    boxWidth: 8
+                                }
+                            },
+                            tooltip: {
+                                padding: 12,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching analytics data:', error));
+    });
+</script>
+{% endblock %}

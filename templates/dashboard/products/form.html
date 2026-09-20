@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Product | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Add New Product</h1>
+        <a href="{% url 'dashboard_products' %}" class="btn">Cancel</a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="product-form" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        {% csrf_token %}
+        
+        <!-- Left Column: Main Info -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Basic Info -->
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg);">
+                <h3 style="margin-bottom: 1.5rem;">Basic Information</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Product Name *</label>
+                    <input type="text" name="name" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" oninput="document.getElementById('slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Slug *</label>
+                        <input type="text" name="slug" id="slug" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">SKU *</label>
+                        <input type="text" name="sku" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Short Description</label>
+                    <textarea name="short_description" rows="2" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></textarea>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Full Description *</label>
+                    <textarea name="description" required rows="6" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></textarea>
+                </div>
+            </div>
+
+            <!-- Media -->
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg);">
+                <h3 style="margin-bottom: 1.5rem;">Product Images</h3>
+                
+                <div id="drop-zone" style="border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 3rem; text-align: center; cursor: pointer; transition: background 0.3s; background: #fff;">
+                    <i class="ph ph-upload-simple" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                    <p>Drag and drop images here, or click to browse</p>
+                    <input type="file" name="images" id="file-input" multiple accept="image/*" style="display: none;">
+                </div>
+                
+                <div id="image-preview" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;"></div>
+            </div>
+            
+            <!-- Variants -->
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Variants (Optional)</h3>
+                    <button type="button" id="add-variant" class="btn">Add Variant</button>
+                </div>
+                
+                <div id="variants-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                <input type="hidden" name="variants_data" id="variants_data">
+            </div>
+        </div>
+        
+        <!-- Right Column: Taxonomy & Pricing -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Category Hierarchy (DYNAMIC) -->
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg);">
+                <h3 style="margin-bottom: 1.5rem;">Categorization</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Brand</label>
+                    <select name="brand" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <option value="">No Brand</option>
+                        {% for brand in brands %}
+                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Category *</label>
+                    <select name="category" id="cat-level-0" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <option value="">Select Category...</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Subcategory</label>
+                    <select name="subcategory" id="cat-level-1" disabled style="width: 100%; padding: 0.75rem; background: #f9f9f9; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <option value="">Select Subcategory...</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Child Category</label>
+                    <select name="child_category" id="cat-level-2" disabled style="width: 100%; padding: 0.75rem; background: #f9f9f9; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <option value="">Select Child Category...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Pricing & Inventory -->
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg);">
+                <h3 style="margin-bottom: 1.5rem;">Pricing & Inventory</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Price ($) *</label>
+                        <input type="number" step="0.01" name="price" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Stock Quantity *</label>
+                        <input type="number" name="stock_quantity" required value="0" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Status</label>
+                    <select name="status" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem;">Save Product</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Dynamic Category AJAX
+    const catLevel0 = document.getElementById('cat-level-0');
+    const catLevel1 = document.getElementById('cat-level-1');
+    const catLevel2 = document.getElementById('cat-level-2');
+    
+    async function fetchChildren(parentId, targetSelect, nextSelectToClear) {
+        if (!parentId) {
+            targetSelect.innerHTML = '<option value="">Select...</option>';
+            targetSelect.disabled = true;
+            targetSelect.style.background = '#f9f9f9';
+            if (nextSelectToClear) {
+                nextSelectToClear.innerHTML = '<option value="">Select...</option>';
+                nextSelectToClear.disabled = true;
+                nextSelectToClear.style.background = '#f9f9f9';
+            }
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/dashboard/api/categories/${parentId}/children/`);
+            const data = await res.json();
+            
+            targetSelect.innerHTML = '<option value="">Select...</option>';
+            if (data.children.length > 0) {
+                data.children.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    targetSelect.appendChild(opt);
+                });
+                targetSelect.disabled = false;
+                targetSelect.style.background = '#fff';
+            } else {
+                targetSelect.disabled = true;
+                targetSelect.style.background = '#f9f9f9';
+            }
+            
+            if (nextSelectToClear) {
+                nextSelectToClear.innerHTML = '<option value="">Select...</option>';
+                nextSelectToClear.disabled = true;
+                nextSelectToClear.style.background = '#f9f9f9';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    
+    catLevel0.addEventListener('change', (e) => fetchChildren(e.target.value, catLevel1, catLevel2));
+    catLevel1.addEventListener('change', (e) => fetchChildren(e.target.value, catLevel2, null));
+
+    // 2. Drag & Drop Images
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('image-preview');
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#111';
+        dropZone.style.background = '#fafafa';
+    });
+    
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border-color)';
+        dropZone.style.background = '#fff';
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border-color)';
+        dropZone.style.background = '#fff';
+        
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            updatePreview();
+        }
+    });
+    
+    fileInput.addEventListener('change', updatePreview);
+    
+    function updatePreview() {
+        preview.innerHTML = '';
+        Array.from(fileInput.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.width = '80px';
+                img.style.height = '80px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '4px';
+                img.style.border = '1px solid var(--border-color)';
+                preview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // 3. Variant Builder
+    const addVariantBtn = document.getElementById('add-variant');
+    const variantsContainer = document.getElementById('variants-container');
+    const variantsDataInput = document.getElementById('variants_data');
+    let variants = [];
+    
+    function renderVariants() {
+        variantsContainer.innerHTML = '';
+        variants.forEach((v, index) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '1rem';
+            row.style.alignItems = 'center';
+            row.innerHTML = `
+                <input type="text" placeholder="Name (e.g. Red/L)" value="${v.name}" onchange="updateV(${index}, 'name', this.value)" style="flex:1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <input type="text" placeholder="SKU" value="${v.sku}" onchange="updateV(${index}, 'sku', this.value)" style="width: 100px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <input type="number" step="0.01" placeholder="Price" value="${v.price}" onchange="updateV(${index}, 'price', this.value)" style="width: 100px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <input type="number" placeholder="Stock" value="${v.stock}" onchange="updateV(${index}, 'stock', this.value)" style="width: 80px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <button type="button" class="btn" onclick="removeV(${index})" style="padding: 0.5rem; color: #ef4444;"><i class="ph ph-trash"></i></button>
+            `;
+            variantsContainer.appendChild(row);
+        });
+        variantsDataInput.value = JSON.stringify(variants);
+    }
+    
+    window.updateV = (index, field, value) => {
+        variants[index][field] = value;
+        variantsDataInput.value = JSON.stringify(variants);
+    };
+    
+    window.removeV = (index) => {
+        variants.splice(index, 1);
+        renderVariants();
+    };
+    
+    addVariantBtn.addEventListener('click', () => {
+        variants.push({name: '', sku: '', price: '', stock: '0'});
+        renderVariants();
+    });
+});
+</script>
+{% endblock %}

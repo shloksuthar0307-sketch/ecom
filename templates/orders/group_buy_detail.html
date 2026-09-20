@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Group Buy | AEON{% endblock %}
+
+{% block content %}
+<div class="container pdp-layout" style="margin-top: 2rem;">
+    <h2>Group Buy: {{ group.product.name }}</h2>
+    <div style="display: flex; gap: 2rem; margin-top: 2rem;">
+        <div style="flex: 1;">
+            {% if group.product.images.first %}
+                <img src="{{ group.product.images.first.image.url }}" alt="{{ group.product.name }}" style="width: 100%; border-radius: 8px;">
+            {% endif %}
+        </div>
+        <div style="flex: 1;">
+            <h3>Discount: {{ group.discount }}%</h3>
+            <p><strong>Required Members:</strong> <span id="req-members">{{ group.req_members }}</span></p>
+            <p><strong>Current Members:</strong> <span id="current-members">{{ group.members.count }}</span></p>
+            
+            <div id="status-message" style="margin-top: 1rem; padding: 1rem; border-radius: 4px; background: {% if group.is_locked %}#d1fae5{% else %}#fef3c7{% endif %};">
+                {% if group.is_locked %}
+                    <strong>Group is Full!</strong> You can now proceed to checkout with the discount.
+                {% else %}
+                    <strong>Waiting for more members...</strong> Share this link to invite friends.
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                {% if not group.is_locked %}
+                    {% if user not in group.members.all %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">Join Group Buy</button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-outline" disabled>You have joined</button>
+                    {% endif %}
+                {% else %}
+                    {% if user in group.members.all %}
+                    <!-- We just add the product to cart with the discount applied implicitly or explicitly, 
+                         or directly redirect to a special group buy checkout. For now, add to cart. -->
+                    <form action="{% url 'cart_add' group.product.id %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-primary">Add to Cart with Discount</button>
+                    </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = '{{ group.token }}';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(protocol + '//' + window.location.host + '/ws/group-buy/' + token + '/');
+    
+    ws.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if(data.type === 'member_count') {
+            document.getElementById('current-members').textContent = data.count;
+            if (data.is_locked) {
+                location.reload();
+            }
+        }
+    };
+</script>
+{% endblock %}

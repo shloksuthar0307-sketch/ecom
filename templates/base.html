@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AEON | Premium E-Commerce{% endblock %}</title>
+    
+    {% include 'components/seo.html' %}
+    
+    <!-- Phosphor Icons for modern minimal icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons (Phosphor Icons for a premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style_v3.css' %}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    
+    {% include 'components/navbar.html' %}
+    
+    <!-- Messages / Toasts -->
+    <div id="toast-container" class="toast-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="toast toast-{{ message.tags }}">
+                    <p>{{ message }}</p>
+                    <button class="toast-close"><i class="ph ph-x"></i></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    {% include 'components/footer.html' %}
+
+    <!-- Quick View Modal Container -->
+    <div id="quick-view-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="modal-close"><i class="ph ph-x"></i></button>
+            <div class="modal-body" id="quick-view-content">
+                <!-- Content loaded via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Virtual Stylist Chat Widget -->
+    <div id="ai-chat-widget">
+        <button id="chat-toggle-btn" class="chat-toggle-btn">
+            <i class="ph ph-sparkle"></i>
+        </button>
+        <div id="chat-window" class="chat-window hidden">
+            <div class="chat-header">
+                <h3><i class="ph ph-sparkle"></i> AI Stylist</h3>
+                <button id="chat-close-btn"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-bubble ai">
+                    Hi! I'm your AI Stylist. How can I help you find the perfect outfit today?
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea id="chat-input" rows="1" placeholder="E.g., I need a summer shirt..." style="resize: none; overflow-y: hidden;"></textarea>
+                <button id="chat-send-btn"><i class="ph ph-paper-plane-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

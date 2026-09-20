@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Complete Split Payment | AEON{% endblock %}
+
+{% block content %}
+<div class="container section" style="max-width: 600px; margin: 4rem auto; text-align: center;">
+    <h2>Processing Split Payment...</h2>
+    <p>Please complete the payment in the secure modal.</p>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+window.onload = function() {
+    var options = {
+        "key": "{{ razorpay_key_id }}",
+        "amount": "{{ amount }}",
+        "currency": "INR",
+        "name": "AEON",
+        "description": "Split Payment for Order {{ order.order_number }}",
+        "order_id": "{{ razorpay_order_id }}",
+        "handler": function (response) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "split_payment_verify" %}';
+            
+            const fields = {
+                'razorpay_payment_id': response.razorpay_payment_id,
+                'razorpay_order_id': response.razorpay_order_id,
+                'razorpay_signature': response.razorpay_signature,
+                'split_token': '{{ split_token }}'
+            };
+            
+            for (const key in fields) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = fields[key];
+                form.appendChild(input);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        },
+        "theme": { "color": "#000000" }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response){
+        alert("Payment Failed: " + response.error.description);
+        window.location.href = '{% url "shop" %}';
+    });
+    rzp.open();
+};
+</script>
+{% endblock %}

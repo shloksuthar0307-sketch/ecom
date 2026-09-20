@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Category Management | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{% url 'custom_dashboard' %}" style="color: var(--text-secondary);"><i class="ph ph-arrow-left" style="font-size: 1.5rem;"></i></a>
+            <h1 style="margin: 0;">Categories</h1>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'dashboard_products' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Products</a>
+        </div>
+    </div>
+
+    <!-- Metrics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+            <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Root Categories</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ metrics.categories }}</div>
+        </div>
+        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+            <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Subcategories</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ metrics.subcategories }}</div>
+        </div>
+        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+            <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Child Categories</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ metrics.child_categories }}</div>
+        </div>
+    </div>
+
+    <!-- Tabs Header -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; overflow-x: auto;">
+        <button class="btn cat-tab-btn active" onclick="switchTab('root', this)" style="border-radius: 99px; background: var(--text-color); color: var(--bg-color); min-width: 150px;">Root Categories</button>
+        <button class="btn cat-tab-btn" onclick="switchTab('sub', this)" style="border-radius: 99px; background: transparent; color: var(--text-color); border: 1px solid var(--border-color); min-width: 150px;">Subcategories</button>
+        <button class="btn cat-tab-btn" onclick="switchTab('child', this)" style="border-radius: 99px; background: transparent; color: var(--text-color); border: 1px solid var(--border-color); min-width: 150px;">Child Categories</button>
+    </div>
+
+    <!-- Root Tab -->
+    <div id="root" class="cat-tab-content">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <a href="{% url 'dashboard_category_add' level=0 %}" class="btn">+ Add Root Category</a>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; overflow-x: auto; border: 1px solid var(--border-color);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 1rem;">Name</th>
+                        <th style="padding: 1rem;">Slug</th>
+                        <th style="padding: 1rem;">Status</th>
+                        <th style="padding: 1rem;">Products</th>
+                        <th style="padding: 1rem; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in categories %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem; font-weight: 500;">{{ cat.name }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ cat.slug }}</td>
+                        <td style="padding: 1rem;">
+                            {% if cat.is_active %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #d1fae5; color: #065f46;">Active</span>
+                            {% else %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #f3f4f6; color: #374151;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">{{ cat.product_count }}</td>
+                        <td style="padding: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a href="{% url 'dashboard_category_edit' cat.pk %}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid var(--border-color); color: var(--text-color);">Edit</a>
+                            <a href="{% url 'dashboard_category_delete' cat.pk %}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: transparent; color: #ef4444; border: 1px solid #ef4444;">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No categories found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sub Tab -->
+    <div id="sub" class="cat-tab-content" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <a href="{% url 'dashboard_category_add' level=1 %}" class="btn">+ Add Subcategory</a>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; overflow-x: auto; border: 1px solid var(--border-color);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 1rem;">Name</th>
+                        <th style="padding: 1rem;">Root Category</th>
+                        <th style="padding: 1rem;">Status</th>
+                        <th style="padding: 1rem;">Products</th>
+                        <th style="padding: 1rem; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in subcategories %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem; font-weight: 500;">{{ cat.name }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ cat.parent.name }}</td>
+                        <td style="padding: 1rem;">
+                            {% if cat.is_active %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #d1fae5; color: #065f46;">Active</span>
+                            {% else %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #f3f4f6; color: #374151;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">{{ cat.product_count }}</td>
+                        <td style="padding: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a href="{% url 'dashboard_category_edit' cat.pk %}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid var(--border-color); color: var(--text-color);">Edit</a>
+                            <a href="{% url 'dashboard_category_delete' cat.pk %}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: transparent; color: #ef4444; border: 1px solid #ef4444;">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No categories found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Child Tab -->
+    <div id="child" class="cat-tab-content" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <a href="{% url 'dashboard_category_add' level=2 %}" class="btn">+ Add Child Category</a>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; overflow-x: auto; border: 1px solid var(--border-color);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 1rem;">Name</th>
+                        <th style="padding: 1rem;">Subcategory</th>
+                        <th style="padding: 1rem;">Root Category</th>
+                        <th style="padding: 1rem;">Status</th>
+                        <th style="padding: 1rem;">Products</th>
+                        <th style="padding: 1rem; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in child_categories %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem; font-weight: 500;">{{ cat.name }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ cat.parent.name }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ cat.parent.parent.name }}</td>
+                        <td style="padding: 1rem;">
+                            {% if cat.is_active %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #d1fae5; color: #065f46;">Active</span>
+                            {% else %}
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; background: #f3f4f6; color: #374151;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">{{ cat.product_count }}</td>
+                        <td style="padding: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a href="{% url 'dashboard_category_edit' cat.pk %}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid var(--border-color); color: var(--text-color);">Edit</a>
+                            <a href="{% url 'dashboard_category_delete' cat.pk %}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: transparent; color: #ef4444; border: 1px solid #ef4444;">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No categories found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.cat-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.cat-tab-btn').forEach(el => {
+        el.style.background = 'transparent';
+        el.style.color = 'var(--text-color)';
+    });
+    document.getElementById(tabId).style.display = 'block';
+    btn.style.background = 'var(--text-color)';
+    btn.style.color = 'var(--bg-color)';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Split Payment | AEON{% endblock %}
+
+{% block content %}
+<div class="container section" style="max-width: 600px; margin: 4rem auto; text-align: center;">
+    <h2>You've been invited to split a payment!</h2>
+    <p style="margin-bottom: 2rem;">Your friend needs help paying for an order. They have already paid 50% of the total amount.</p>
+    
+    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--border-color);">
+        <h3 style="margin-top: 0;">Order Total: ${{ order.total|add:split_payment.amount_paid }}</h3>
+        <p style="font-size: 1.25rem; font-weight: 700; color: #10b981; margin: 1rem 0;">Your Share: ${{ split_payment.amount_paid }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+            Pay My Share Securely
+        </button>
+    </form>
+</div>
+{% endblock %}

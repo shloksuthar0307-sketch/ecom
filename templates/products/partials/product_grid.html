@@ -1,0 +1,39 @@
+<div class="shop-header animate-on-scroll">
+    <h1 class="page-title">Shop</h1>
+    <div class="shop-controls">
+        <span>Showing {{ products.start_index }}-{{ products.end_index }} of {{ products.paginator.count }} products</span>
+        <select name="sort" form="filter-form" id="sort-select">
+            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest Arrivals</option>
+            <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+            <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+        </select>
+    </div>
+</div>
+
+<div class="product-grid">
+    {% for product in products %}
+        {% include 'components/product_card.html' with product=product %}
+    {% empty %}
+        <div class="empty-state">
+            <i class="ph ph-package"></i>
+            <h2>No products found</h2>
+            <p>Try adjusting your filters.</p>
+            <a href="javascript:void(0)" onclick="clearAllFilters()" class="btn btn-primary">Clear all filters</a>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if products.has_other_pages %}
+<div class="pagination animate-on-scroll">
+    {% if products.has_previous %}
+        <a href="?page={{ products.previous_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_brand %}&brand={{ current_brand }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="page-link ajax-page"><i class="ph ph-caret-left"></i></a>
+    {% endif %}
+    
+    <span class="current-page">Page {{ products.number }} of {{ products.paginator.num_pages }}</span>
+    
+    {% if products.has_next %}
+        <a href="?page={{ products.next_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_brand %}&brand={{ current_brand }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="page-link ajax-page"><i class="ph ph-caret-right"></i></a>
+    {% endif %}
+</div>
+{% endif %}

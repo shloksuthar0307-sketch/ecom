@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-6">
+            <h3>{{ auction.product.name }}</h3>
+            {% if auction.product.images.first %}
+            <img src="{{ auction.product.images.first.image.url }}" class="img-fluid" alt="{{ auction.product.name }}">
+            {% endif %}
+            <p class="mt-3">{{ auction.product.description }}</p>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if auction.is_live %}
+                        <h4 class="text-danger">LIVE AUCTION</h4>
+                        <div id="countdown" class="h2 my-3 font-monospace" data-end="{{ auction.end_time.isoformat }}"></div>
+                        
+                        <h2 class="mt-4">Current Bid: $<span id="current-bid">{{ auction.highest_bid }}</span></h2>
+                        
+                        <div class="mt-4">
+                            <input type="number" id="bid-amount" class="form-control mb-2" placeholder="Bid Amount" step="0.01" min="{{ auction.highest_bid|add:auction.min_increment }}">
+                            <button id="place-bid-btn" class="btn btn-danger btn-lg w-100">Place Bid</button>
+                        </div>
+                    {% elif not auction.is_live and not auction.bids.exists %}
+                        <h4 class="text-muted">Auction Upcoming or Ended</h4>
+                    {% else %}
+                        <h4>Auction Ended</h4>
+                        <p>Winning Bid: ${{ auction.highest_bid }}</p>
+                        {% if request.user == auction.highest_bidder %}
+                            <div class="alert alert-success">
+                                You won this auction!
+                            </div>
+                            <a href="{% url 'auction_checkout' auction.id %}" class="btn btn-success btn-lg w-100">Proceed to Checkout</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">Bid History</div>
+                <div class="card-body p-0">
+                    <ul id="bid-feed" class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                        {% for bid in bids %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong>{{ bid.user.email|truncatechars:10 }}</strong> bid</span>
+                            <span class="badge bg-primary rounded-pill">${{ bid.amount }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if auction.is_live %}
+<script>
+    // Countdown Timer
+    const endStr = document.getElementById('countdown').getAttribute('data-end');
+    const endTime = new Date(endStr).getTime();
+
+    const countdownTimer = setInterval(function() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+
+        if (distance < 0) {
+            clearInterval(countdownTimer);
+            document.getElementById("countdown").innerHTML = "AUCTION ENDED";
+            document.getElementById("place-bid-btn").disabled = true;
+            setTimeout(() => location.reload(), 2000);
+            return;
+        }
+
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        document.getElementById("countdown").innerHTML = 
+            hours.toString().padStart(2, '0') + "h " +
+            minutes.toString().padStart(2, '0') + "m " + 
+            seconds.toString().padStart(2, '0') + "s ";
+    }, 1000);
+
+    // WebSocket implementation
+    const auctionId = "{{ auction.id }}";
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsUrl = protocol + window.location.host + '/ws/auction/' + auctionId + '/';
+    
+    const auctionSocket = new WebSocket(wsUrl);
+
+    auctionSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'new_bid') {
+            document.getElementById('current-bid').innerText = data.amount;
+            
+            // Add to feed
+            const feed = document.getElementById('bid-feed');
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center bg-light';
+            
+            const emailShort = data.user_email.length > 10 ? data.user_email.substring(0, 10) + '...' : data.user_email;
+            
+            li.innerHTML = `
+                <span><strong>${emailShort}</strong> bid</span>
+                <span class="badge bg-primary rounded-pill">$${data.amount}</span>
+            `;
+            
+            feed.insertBefore(li, feed.firstChild);
+            
+            // Update min on input
+            const bidInput = document.getElementById('bid-amount');
+            const minIncrement = {{ auction.min_increment }};
+            bidInput.min = parseFloat(data.amount) + minIncrement;
+            bidInput.value = parseFloat(data.amount) + minIncrement;
+        } else if (data.type === 'error') {
+            alert(data.message);
+        }
+    };
+
+    auctionSocket.onclose = function(e) {
+        console.error('Auction socket closed unexpectedly');
+    };
+
+    document.getElementById('place-bid-btn').onclick = function(e) {
+        const amountInput = document.getElementById('bid-amount');
+        const amount = amountInput.value;
+        
+        if (!amount) {
+            alert('Please enter a bid amount');
+            return;
+        }
+
+        auctionSocket.send(JSON.stringify({
+            'action': 'place_bid',
+            'amount': amount
+        }));
+    };
+</script>
+{% endif %}
+{% endblock %}

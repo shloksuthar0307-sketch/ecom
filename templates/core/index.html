@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container hero-content animate-on-scroll">
+        <h1 class="hero-title">The Future of <br>Personal Tech.</h1>
+        <p class="hero-subtitle">Discover premium devices designed for the modern lifestyle. Uncompromising performance meets minimalist aesthetics.</p>
+        <a href="/shop/" class="btn btn-primary btn-large">Shop Collection <i class="ph ph-arrow-right"></i></a>
+    </div>
+</section>
+
+<!-- Categories -->
+<section class="section categories-section">
+    <div class="container">
+        <div class="section-header animate-on-scroll">
+            <h2>Explore Categories</h2>
+        </div>
+        <div class="category-grid">
+            {% for category in categories %}
+                <a href="{% url 'shop' %}?category={{ category.slug }}" class="category-card animate-on-scroll" style="animation-delay: {{ forloop.counter|add:"-1" }}00ms;">
+                    <div class="category-image-wrap">
+                        {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}">
+                        {% else %}
+                            <div class="placeholder-image"></div>
+                        {% endif %}
+                    </div>
+                    <div class="category-info">
+                        <h3>{{ category.name }}</h3>
+                        <i class="ph ph-arrow-right"></i>
+                    </div>
+                </a>
+            {% empty %}
+                <p>No categories found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- AI Recommendations / Trending Products -->
+<section class="section featured-section">
+    <div class="container">
+        {% if ai_recommendations %}
+            <div class="section-header animate-on-scroll" style="margin-bottom: 0.5rem;">
+                <h2>✨ Stylist's Picks</h2>
+                <a href="/shop/" class="view-all-link">Shop All <i class="ph ph-arrow-right"></i></a>
+            </div>
+            <p class="ai-explanation animate-on-scroll" style="color: var(--color-text-light); font-style: italic; margin-bottom: 2rem;">{{ ai_recommendations.explanation }}</p>
+            
+            <div class="horizontal-carousel" style="display: flex; overflow-x: auto; gap: 1.5rem; padding-bottom: 1rem; scrollbar-width: none;">
+                {% for product in ai_recommendations.products %}
+                    <div style="flex: 0 0 auto; width: 280px;">
+                        {% include 'components/product_card.html' with product=product %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="section-header animate-on-scroll">
+                <h2>Trending Products</h2>
+                <a href="/shop/" class="view-all-link">View All <i class="ph ph-arrow-right"></i></a>
+            </div>
+            <div class="horizontal-carousel" style="display: flex; overflow-x: auto; gap: 1.5rem; padding-bottom: 1rem; scrollbar-width: none;">
+                {% for product in featured_products|slice:":4" %}
+                    <div style="flex: 0 0 auto; width: 280px;">
+                        {% include 'components/product_card.html' with product=product %}
+                    </div>
+                {% empty %}
+                    <p>No featured products available.</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+<style>
+.horizontal-carousel::-webkit-scrollbar {
+    display: none;
+}
+</style>
+
+{% endblock %}

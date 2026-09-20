@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order Success | AEON{% endblock %}
+
+{% block content %}
+<div class="container section" style="min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center;">
+    <div class="animate-on-scroll">
+        <i class="ph ph-check-circle" style="font-size: 5rem; color: #10b981; margin-bottom: 1rem;"></i>
+        <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Thank you for your order!</h1>
+        <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+            Order number: <strong>{{ order_number }}</strong>
+        </p>
+        <p style="margin-bottom: 2rem;">
+            We've sent a confirmation email to your address with all the details.
+        </p>
+        
+        {% if split_payment %}
+        <div style="background: #fef3c7; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border: 1px solid #f59e0b;">
+            <h3 style="margin-top: 0; color: #b45309;"><i class="ph ph-warning-circle"></i> Split Payment Pending</h3>
+            <p style="color: #92400e;">You have paid your half of the order. The order will be shipped once your friend completes the remaining payment.</p>
+            <p style="margin-bottom: 0.5rem; font-weight: 600;">Share this link with your friend:</p>
+            <div style="display: flex; gap: 1rem;">
+                <input type="text" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'friend_split_checkout' split_payment.token %}" style="flex: 1; padding: 0.75rem; border: 1px solid #d97706; border-radius: 4px; background: #fff; font-family: monospace;">
+                <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value); this.innerText='Copied!';" class="btn btn-outline" style="border-color: #d97706; color: #b45309;">Copy Link</button>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if gift_configs %}
+        <div style="background: #fdf4ff; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border: 1px solid #f0abfc;">
+            <h3 style="margin-top: 0; color: #86198f;"><i class="ph ph-gift"></i> Your Gift Boxes</h3>
+            <p style="color: #701a75; margin-bottom: 1rem;">Share the digital experience with the recipient using these links or QR codes.</p>
+            {% for gc in gift_configs %}
+            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e879f9; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="margin: 0 0 0.5rem 0; font-weight: bold;">Box Design: {{ gc.box_design }}</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'gifts:recipient' gc.qr_token %}" style="width: 300px; padding: 0.5rem; border: 1px solid #f0abfc; border-radius: 4px; font-family: monospace; font-size: 0.9rem;">
+                        <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value); this.innerText='Copied!';" class="btn btn-outline" style="border-color: #d946ef; color: #a21caf; padding: 0.5rem 1rem;">Copy Link</button>
+                    </div>
+                </div>
+                <!-- Using a simple QR code API for simplicity -->
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ request.scheme }}://{{ request.get_host }}{% url 'gifts:recipient' gc.qr_token %}" alt="QR Code" style="border-radius: 4px; border: 1px solid #e5e7eb;">
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div>
+            <a href="{% url 'shop' %}" class="btn btn-primary">Continue Shopping</a>
+            <a href="/account/orders/" class="btn" style="border: 1px solid var(--border-color); margin-left: 1rem;">View Order</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

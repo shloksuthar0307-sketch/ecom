@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static mptt_tags %}
+
+{% block content %}
+<div class="container shop-layout">
+    <!-- Sidebar Filters -->
+    <aside class="shop-sidebar animate-on-scroll">
+        <h3>Filters</h3>
+        <form action="{% url 'shop' %}" method="get" id="filter-form">
+            <div class="filter-group">
+                <h4>Categories</h4>
+                <div class="filter-options category-tree">
+                    <ul style="list-style: none; padding-left: 0; margin: 0;">
+                        {% recursetree categories %}
+                            <li style="margin-bottom: 0.5rem;">
+                                {% if not node.is_leaf_node %}
+                                    <details {% if node.id in active_category_ids %}open{% endif %} style="cursor: pointer;">
+                                        <summary style="display: flex; align-items: center; justify-content: space-between; font-weight: {% if current_category == node.slug %}700{% else %}500{% endif %}; list-style: none;">
+                                            <label class="custom-radio" style="margin: 0;">
+                                                <input type="radio" name="category" value="{{ node.slug }}" {% if current_category == node.slug %}checked{% endif %} onchange="this.form.submit()">
+                                                <span>{{ node.name }}</span>
+                                            </label>
+                                            <i class="ph ph-caret-down" style="font-size: 0.8rem; color: var(--text-secondary);"></i>
+                                        </summary>
+                                        <ul style="list-style: none; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; border-left: 1px solid var(--border-color); margin-left: 0.5rem;">
+                                            {{ children }}
+                                        </ul>
+                                    </details>
+                                {% else %}
+                                    <label class="custom-radio" style="margin: 0;">
+                                        <input type="radio" name="category" value="{{ node.slug }}" {% if current_category == node.slug %}checked{% endif %} onchange="this.form.submit()">
+                                        <span style="font-weight: {% if current_category == node.slug %}700{% else %}400{% endif %};">{{ node.name }}</span>
+                                    </label>
+                                {% endif %}
+                            </li>
+                        {% endrecursetree %}
+                    </ul>
+                    {% if current_category %}
+                        <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                            <a href="{% url 'shop' %}" class="ajax-page" style="font-size: 0.9rem; color: var(--text-color); text-decoration: underline;">Clear category</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if active_category and active_category.is_leaf_node %}
+            <div class="filter-group">
+                <h4>Brands</h4>
+                <div class="filter-options">
+                    {% for brand in brands %}
+                        <label class="custom-radio">
+                            <input type="radio" name="brand" value="{{ brand.slug }}" {% if current_brand == brand.slug %}checked{% endif %} onchange="this.form.submit()">
+                            <span>{{ brand.name }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="filter-group">
+                <div class="filter-header" id="price-filter-toggle" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                    <h4 style="margin: 0;">Price</h4>
+                    <i class="ph ph-sliders-horizontal" id="price-icon" style="transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); font-size: 1.2rem; color: var(--text-secondary);"></i>
+                </div>
+                <div id="price-filter-panel" style="max-height: 0; overflow: hidden; opacity: 0; transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);">
+                    <div style="padding-top: 1rem;">
+                        <div class="price-inputs">
+                            <input type="number" name="min_price" placeholder="Min" value="{{ min_price }}">
+                            <span>-</span>
+                            <input type="number" name="max_price" placeholder="Max" value="{{ max_price }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 10px; width: 100%; border-radius: var(--radius-full);">Apply</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preserve sorting -->
+            <input type="hidden" name="sort" value="{{ sort_by }}">
+        </form>
+    </aside>
+
+    <!-- Main Shop Area -->
+    <div class="shop-main" id="shop-main-container">
+        {% include 'products/partials/product_grid.html' %}
+    </div>
+</div>
+
+<!-- NouiSlider for price slider -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('filter-form');
+        const shopMainContainer = document.getElementById('shop-main-container');
+        
+        // Remove direct submit from inputs
+        const radioInputs = form.querySelectorAll('input[type="radio"]');
+        radioInputs.forEach(input => {
+            input.removeAttribute('onchange');
+        });
+        
+        // Setup price slider
+        const priceSlider = document.createElement('div');
+        priceSlider.id = 'price-slider';
+        priceSlider.style.margin = '10px 0 20px 0';
+        
+        const priceInputsDiv = document.querySelector('.price-inputs');
+        priceInputsDiv.parentNode.insertBefore(priceSlider, priceInputsDiv);
+        
+        const minPriceInput = document.querySelector('input[name="min_price"]');
+        const maxPriceInput = document.querySelector('input[name="max_price"]');
+        
+        let startMin = parseInt(minPriceInput.value) || 0;
+        let startMax = parseInt(maxPriceInput.value) || 1000; // default max
+        
+        noUiSlider.create(priceSlider, {
+            start: [startMin, startMax],
+            connect: true,
+            range: {
+                'min': 0,
+                'max': 1000
+            },
+            format: {
+                to: value => Math.round(value),
+                from: value => Number(value)
+            }
+        });
+        
+        priceSlider.noUiSlider.on('update', function (values, handle) {
+            if (handle === 0) {
+                minPriceInput.value = values[0];
+            } else {
+                maxPriceInput.value = values[1];
+            }
+        });
+        
+        priceSlider.noUiSlider.on('change', function () {
+            fetchProducts();
+        });
+        
+        // Prevent default form submit button behavior
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            fetchProducts();
+        });
+        
+        // Listen to change events on the form for radio and select
+        form.addEventListener('change', function(e) {
+            if (e.target.name === 'category' || e.target.name === 'brand' || e.target.name === 'sort') {
+                fetchProducts();
+            }
+        });
+        
+        // Delegate click for pagination and clear filters
+        document.addEventListener('click', function(e) {
+            const pageLink = e.target.closest('.ajax-page');
+            if (pageLink) {
+                e.preventDefault();
+                const url = new URL(pageLink.href);
+                fetchProducts(url.search);
+            }
+        });
+        
+        window.clearAllFilters = function() {
+            form.reset();
+            const url = new URL(window.location.href);
+            url.search = '';
+            fetchProducts(url.search);
+        };
+        
+        // Function to fetch products
+        function fetchProducts(queryString = null) {
+            let search = queryString;
+            if (search === null) {
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    if (value) params.append(key, value);
+                }
+                
+                // Add sort if not in formData
+                const sortSelect = document.getElementById('sort-select');
+                if (sortSelect && !params.has('sort') && sortSelect.value) {
+                    params.append('sort', sortSelect.value);
+                }
+                
+                search = params.toString() ? '?' + params.toString() : window.location.pathname;
+            }
+            
+            // Update URL
+            const url = window.location.pathname + (search !== window.location.pathname ? search : '');
+            history.pushState(null, '', url);
+            
+            // Add loading state
+            shopMainContainer.style.opacity = '0.5';
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                shopMainContainer.innerHTML = html;
+                shopMainContainer.style.opacity = '1';
+                
+                // Re-trigger animations
+                const animateElements = shopMainContainer.querySelectorAll('.animate-on-scroll');
+                animateElements.forEach(el => {
+                    el.classList.remove('animate-on-scroll');
+                    void el.offsetWidth; // trigger reflow
+                    el.classList.add('animate-on-scroll');
+                });
+                
+                // Ensure sort select triggers fetch
+                const newSortSelect = document.getElementById('sort-select');
+                if (newSortSelect) {
+                    newSortSelect.addEventListener('change', function() {
+                        // update hidden input if exists
+                        const hiddenSort = form.querySelector('input[name="sort"]');
+                        if (hiddenSort) hiddenSort.value = this.value;
+                        fetchProducts();
+                    });
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching products:", err);
+                shopMainContainer.style.opacity = '1';
+            });
+        }
+        
+        // Handle back/forward navigation
+        window.addEventListener('popstate', function() {
+            fetchProducts(window.location.search);
+        });
+        
+        // Initial setup for select
+        const sortSelect = document.getElementById('sort-select');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function() {
+                const hiddenSort = form.querySelector('input[name="sort"]');
+                if (hiddenSort) hiddenSort.value = this.value;
+                fetchProducts();
+            });
+        }
+    });
+</script>
+{% endblock %}

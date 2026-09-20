@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}AI Stylist Results - AEON{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 2rem 0;">
+    <h2>AI Stylist Results</h2>
+    
+    {% if error %}
+        <div class="alert alert-danger" style="color: red; margin-bottom: 2rem;">
+            {{ error }}
+        </div>
+    {% else %}
+        <p>Showing results for: <strong>"{{ query }}"</strong></p>
+        
+        {% if intent %}
+            <div style="background-color: var(--bg-secondary, #f8f9fa); padding: 1rem; margin-bottom: 2rem; border-radius: 8px;">
+                <h4>Understood Intent:</h4>
+                <ul>
+                    {% if intent.category %}<li><strong>Category:</strong> {{ intent.category }}</li>{% endif %}
+                    {% if intent.color %}<li><strong>Color:</strong> {{ intent.color }}</li>{% endif %}
+                    {% if intent.max_price %}<li><strong>Max Price:</strong> ${{ intent.max_price }}</li>{% endif %}
+                </ul>
+            </div>
+        {% else %}
+            <div style="background-color: var(--bg-secondary, #f8f9fa); padding: 1rem; margin-bottom: 2rem; border-radius: 8px;">
+                <p>Could not extract specific AI intent. Falling back to basic search.</p>
+            </div>
+        {% endif %}
+        
+        <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+            {% for product in products %}
+                <div class="product-card" style="border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; padding: 1rem;">
+                    {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px;">
+                    {% else %}
+                        <div style="width: 100%; height: 200px; background-color: #eee; display: flex; align-items: center; justify-content: center; border-radius: 4px;">No Image</div>
+                    {% endif %}
+                    <h4 style="margin: 1rem 0 0.5rem 0;">{{ product.name }}</h4>
+                    <p style="font-weight: bold; color: var(--text-color, #333);">${{ product.price }}</p>
+                    <a href="{% url 'product_detail' product.slug %}" class="btn" style="display: inline-block; margin-top: 0.5rem; text-decoration: none; padding: 0.5rem 1rem; background-color: var(--text-color, #333); color: white; border-radius: 4px;">View Product</a>
+                </div>
+            {% empty %}
+                <p>No products found matching your description.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

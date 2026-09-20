@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lookbooks | AEON{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Animasterlib Entrance Animations */
+    @keyframes animaster-slide-up {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animaster-stagger {
+        animation: animaster-slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+    }
+    
+    /* Skiper UI Hover Effects */
+    .skiper-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+        display: block;
+        background: #000;
+    }
+    
+    .skiper-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    
+    .skiper-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+        opacity: 0.9;
+        aspect-ratio: 4/5;
+        display: block;
+    }
+    
+    .skiper-card:hover .skiper-image {
+        transform: scale(1.08);
+        opacity: 0.7;
+    }
+    
+    .skiper-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+        display: flex;
+        align-items: flex-end;
+        padding: 32px;
+        color: white;
+    }
+    
+    .skiper-title {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.02em;
+        transform: translateY(10px);
+        opacity: 0.9;
+        transition: transform 0.4s ease, opacity 0.4s ease;
+    }
+    
+    .skiper-card:hover .skiper-title {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .lookbook-header {
+        text-align: center;
+        padding: 80px 20px 60px;
+    }
+
+    .lookbook-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 32px;
+        padding: 0 40px 80px;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lookbook-header animaster-stagger" style="animation-delay: 0.1s;">
+    <h1 style="font-size: 3rem; margin-bottom: 16px;">The Lookbook</h1>
+    <p style="color: #666; font-size: 1.1rem;">Explore curated collections and styling inspiration.</p>
+</div>
+
+<div class="lookbook-grid">
+    {% for lookbook in lookbooks %}
+    <a href="{% url 'lookbook:detail' lookbook.slug %}" class="skiper-card animaster-stagger" style="animation-delay: {{ forloop.counter0|add:2 }}00ms;">
+        {% if lookbook.hero_image %}
+        <img src="{{ lookbook.hero_image.url }}" alt="{{ lookbook.title }}" class="skiper-image">
+        {% endif %}
+        <div class="skiper-overlay">
+            <h2 class="skiper-title">{{ lookbook.title }}</h2>
+        </div>
+    </a>
+    {% empty %}
+    <div style="text-align: center; grid-column: 1/-1; padding: 100px;">
+        <p>No lookbooks available yet.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

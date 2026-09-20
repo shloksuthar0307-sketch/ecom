@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}All Categories | AEON{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="text-align: center; margin-bottom: 4rem;">
+        <h1 style="font-size: 3rem; margin-bottom: 1rem;">Shop by Category</h1>
+        <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Discover our premium selection of products organized by category.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem;">
+        {% for cat in categories %}
+        <a href="{% url 'category_detail' cat.slug %}" style="display: block; text-decoration: none; color: inherit; background: var(--bg-secondary); border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
+            <div style="height: 200px; background: {% if cat.image %}url('{{ cat.image.url }}') center/cover{% else %}#e5e5e5{% endif %};"></div>
+            <div style="padding: 1.5rem; text-align: center;">
+                <h3 style="margin-bottom: 0.5rem;">{{ cat.name }}</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">{{ cat.get_descendant_count }} subcategories</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

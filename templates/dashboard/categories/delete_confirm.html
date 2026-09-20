@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Category | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="max-width: 500px; margin: 4rem auto; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; border: 1px solid #ef4444; text-align: center;">
+        
+        <i class="ph ph-warning-circle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
+        
+        <h2 style="margin-bottom: 1rem;">Delete Category</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+            Are you sure you want to delete <strong>{{ category.name }}</strong>?
+        </p>
+
+        {% if category.get_descendant_count > 0 or category.products.exists %}
+            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 2rem; text-align: left;">
+                <p style="margin: 0; font-weight: 600;">Cannot Delete Category</p>
+                <p style="margin: 0; font-size: 0.9rem;">This category contains {{ category.get_descendant_count }} child categories and {{ category.products.count }} products. You must delete or reassign them before deleting this category.</p>
+            </div>
+            <a href="{% url 'dashboard_category_list' %}" class="btn">Back to Categories</a>
+        {% else %}
+            <form method="POST">
+                {% csrf_token %}
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <a href="{% url 'dashboard_category_list' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Cancel</a>
+                    <button type="submit" class="btn" style="background: #ef4444; color: white;">Yes, Delete Category</button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

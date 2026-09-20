@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Exclude private paths
+Disallow: /admin/
+Disallow: /account/
+Disallow: /cart/
+Disallow: /wishlist/
+Disallow: /orders/
+Disallow: /payments/
+Disallow: /dashboard/
+
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml

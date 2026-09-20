@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Secure Checkout | AEON{% endblock %}
+
+{% block content %}
+<style>
+/* Vengeance UI Split-Screen */
+.checkout-wrapper { max-width: 1200px; margin: 2rem auto; display: grid; grid-template-columns: 1fr 400px; gap: 3rem; }
+@media (max-width: 992px) { .checkout-wrapper { grid-template-columns: 1fr; } }
+
+/* Step Indicator */
+.step-indicator { display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative; }
+.step-indicator::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--border-color); z-index: 1; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; position: relative; z-index: 2; background: #fff; padding: 0 1rem; }
+.step-circle { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 600; transition: all 0.3s; }
+.step.active .step-circle { border-color: #000; background: #000; color: #fff; }
+.step.completed .step-circle { border-color: #10b981; background: #10b981; color: #fff; }
+
+.checkout-steps-content > div { display: none; animation: fadeIn 0.4s ease-out forwards; }
+.checkout-steps-content > div.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Address Cards */
+.address-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.address-card { border: 2px solid var(--border-color); padding: 1.5rem; border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s; position: relative; }
+.address-card:hover { border-color: #ccc; }
+.address-card.selected { border-color: #000; background: var(--bg-secondary); }
+.address-card.selected::after { content: '\2713'; position: absolute; top: 1rem; right: 1rem; background: #000; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+
+/* Sticky Summary */
+.order-summary-sticky { position: sticky; top: 100px; background: #f9fafb; padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+.summary-line { display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1rem; }
+.summary-line.total { font-weight: 700; font-size: 1.25rem; border-top: 2px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem; }
+
+/* Form inputs */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.form-control { width: 100%; padding: 0.875rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); outline: none; transition: border 0.2s; }
+.form-control:focus { border-color: #000; }
+
+/* Logos */
+.payment-logos { display: flex; gap: 1rem; align-items: center; justify-content: center; margin-top: 2rem; }
+.payment-logos img { height: 30px; object-fit: contain; filter: grayscale(100%); opacity: 0.7; transition: all 0.2s; }
+.payment-logos img:hover { filter: grayscale(0%); opacity: 1; }
+
+.coupon-box { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+.coupon-box input { flex: 1; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); outline: none; }
+.coupon-box button { background: #000; color: #fff; padding: 0 1.5rem; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; transition: background 0.2s; }
+
+/* Success state button */
+.btn-success-state { background-color: #10b981 !important; color: white !important; border-color: #10b981 !important; }
+</style>
+
+<div class="container section">
+    <div class="checkout-wrapper">
+        <!-- Left Side: Steps -->
+        <div class="checkout-main">
+            <div class="step-indicator">
+                <div class="step active" id="ind-step1"><div class="step-circle">1</div><span>Address</span></div>
+                <div class="step" id="ind-step2"><div class="step-circle">2</div><span>Summary</span></div>
+                <div class="step" id="ind-step3"><div class="step-circle">3</div><span>Payment</span></div>
+            </div>
+
+            <div class="checkout-steps-content">
+                <!-- STEP 1: Address -->
+                <div id="content-step1" class="active">
+                    <h2 style="margin-bottom: 1.5rem;">Select Shipping Address</h2>
+                    
+                    <div class="address-grid">
+                        {% if addresses %}
+                        {% for address in addresses %}
+                        <div class="address-card {% if forloop.first %}selected{% endif %}" onclick="selectAddress(this, {{ address.id }})">
+                            <h4 style="margin: 0 0 0.5rem 0;">{{ address.title }}</h4>
+                            <p style="margin: 0; color: var(--text-secondary); line-height: 1.5;">
+                                {{ address.first_name }} {{ address.last_name }}<br>
+                                {{ address.street_address }}<br>
+                                {{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="btn btn-outline" style="margin-top: 1.5rem;" onclick="toggleNewAddress()">+ Add New Address</button>
+
+                    <div id="new-address-form" style="display: {% if not addresses %}block{% else %}none{% endif %}; margin-top: 2rem; padding: 1.5rem; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                        <h4 style="margin-top: 0;">Add New Address</h4>
+                        <form id="addressForm">
+                            <div class="form-grid">
+                                <div><input type="text" id="fn" class="form-control" placeholder="First Name" required></div>
+                                <div><input type="text" id="ln" class="form-control" placeholder="Last Name" required></div>
+                            </div>
+                            <div class="form-grid" style="grid-template-columns: 1fr;">
+                                <div><input type="tel" id="ph" class="form-control" placeholder="Phone Number" required></div>
+                                <div><input type="text" id="sa" class="form-control" placeholder="Street Address" required></div>
+                            </div>
+                            <div class="form-grid">
+                                <div><input type="text" id="city" class="form-control" placeholder="City" required></div>
+                                <div><input type="text" id="state" class="form-control" placeholder="State" required></div>
+                            </div>
+                            <div class="form-grid">
+                                <div><input type="text" id="pc" class="form-control" placeholder="Postal Code" required></div>
+                                <div><input type="text" id="country" class="form-control" value="India" required></div>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="saveNewAddress()">Save Address</button>
+                        </form>
+                    </div>
+
+                    <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                        <button class="btn btn-primary" onclick="goToStep(2)">Continue to Summary</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Summary -->
+                <div id="content-step2">
+                    <h2 style="margin-bottom: 1.5rem;">Order Summary</h2>
+                    <div id="cart-items-review">
+                        {% for item in cart %}
+                        <div class="summary-item" style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+                            {% if item.product.images.first %}
+                            <img src="{{ item.product.images.first.image.url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-md);">
+                            {% else %}
+                            <div style="width:80px; height:80px; background:#eee; border-radius: var(--radius-md);"></div>
+                            {% endif %}
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0;">{{ item.product.name }}</h4>
+                                {% if item.variant %}
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Variant: {{ item.variant.name }}</p>
+                                {% endif %}
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Qty: {{ item.quantity }}</p>
+                            </div>
+                            <div style="font-weight: 600; font-size: 1.1rem;">
+                                $<span class="item-cost">{{ item.get_cost }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div style="margin-top: 2rem; display: flex; justify-content: space-between;">
+                        <button class="btn btn-outline" onclick="goToStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="goToStep(3)">Continue to Payment</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Payment -->
+                <div id="content-step3">
+                    <h2 style="margin-bottom: 1.5rem;">Select Payment Method</h2>
+                    
+                    <div style="border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; background: #fff;">
+                        <!-- Credit/Debit Cards -->
+                        <label class="payment-method-card" style="display: flex; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="payment_method" value="razorpay_card" checked style="margin-right: 1.2rem; width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                            <div style="flex-grow: 1;">
+                                <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Credit or Debit Card</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">Visa, Mastercard, RuPay, Maestro</span>
+                            </div>
+                            <div class="payment-logos" style="display: flex; gap: 0.75rem; align-items: center;">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" style="height: 16px; object-fit: contain;">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" style="height: 20px; object-fit: contain;">
+                            </div>
+                        </label>
+
+                        <!-- UPI -->
+                        <label class="payment-method-card" style="display: flex; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="payment_method" value="razorpay_upi" style="margin-right: 1.2rem; width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                            <div style="flex-grow: 1;">
+                                <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Other UPI Apps</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">Google Pay, PhonePe, Paytm, Amazon Pay</span>
+                            </div>
+                            <div class="payment-logos" style="display: flex; gap: 0.75rem; align-items: center;">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" alt="UPI" style="height: 18px; object-fit: contain;">
+                            </div>
+                        </label>
+                        
+                        <!-- Net Banking -->
+                        <label class="payment-method-card" style="display: flex; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="payment_method" value="razorpay_netbanking" style="margin-right: 1.2rem; width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                            <div style="flex-grow: 1;">
+                                <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Net Banking</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">All major Indian banks supported</span>
+                            </div>
+                            <i class="ph ph-bank" style="font-size: 1.8rem; color: var(--text-secondary);"></i>
+                        </label>
+
+                        <!-- COD Option -->
+                        <label class="payment-method-card" style="display: flex; align-items: center; padding: 1.5rem; cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="payment_method" value="cod" style="margin-right: 1.2rem; width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                            <div style="flex-grow: 1;">
+                                <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Cash on Delivery (COD)</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">Pay with cash when your order is delivered.</span>
+                            </div>
+                            <i class="ph ph-money" style="font-size: 1.8rem; color: var(--text-secondary);"></i>
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding: 1rem 1.5rem; background: #ecfdf5; border: 1px solid #10b981; border-radius: var(--radius-md); display: flex; align-items: center; gap: 1rem;">
+                        <i class="ph ph-shield-check" style="font-size: 2rem; color: #10b981;"></i>
+                        <div>
+                            <strong style="display: block; color: #065f46;">100% Secure Payments</strong>
+                            <span style="font-size: 0.85rem; color: #064e3b;">Your payment information is encrypted and securely processed.</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Split Payment with a Friend</strong>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">Pay 50% now and share a link for the rest.</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="split_payment_toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <style>
+                        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+                        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+                        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+                        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+                        input:checked + .slider { background-color: #000; }
+                        input:checked + .slider:before { transform: translateX(22px); }
+                    </style>
+                    
+                    <div style="margin-top: 2rem;">
+                        <button class="btn btn-outline" onclick="goToStep(2)">Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Sticky Summary -->
+        <div>
+            <div class="order-summary-sticky">
+                <h3 style="margin-top: 0; margin-bottom: 1.5rem;">Order Details</h3>
+                
+                <div class="summary-line">
+                    <span>Subtotal</span>
+                    <span>$<span id="sum-sub">{{ cart.get_subtotal }}</span></span>
+                </div>
+                <div class="summary-line" style="color: #10b981;">
+                    <span>Discount</span>
+                    <span>-$<span id="sum-disc">{{ cart.get_discount }}</span></span>
+                </div>
+                <div class="summary-line">
+                    <span>Shipping</span>
+                    <span>Free</span>
+                </div>
+                
+                <div class="summary-line total">
+                    <span>Total</span>
+                    <span>$<span id="sum-total">{{ cart.get_total_price }}</span></span>
+                </div>
+                
+                <div class="coupon-box">
+                    <input type="text" id="coupon_code" placeholder="Coupon code" value="{{ cart.coupon.code|default:'' }}">
+                    <button type="button" onclick="applyCoupon()">APPLY</button>
+                </div>
+                <p id="coupon-msg" style="font-size:0.85rem; margin-top:0.5rem;"></p>
+                
+                <button class="btn btn-primary" id="main-pay-btn" style="width: 100%; margin-top: 2rem; padding: 1rem; font-size: 1.1rem; display: none; transition: all 0.3s;" onclick="processPayment()">
+                    Pay Securely
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+let selectedAddressId = {% if addresses %}{{ addresses.0.id }}{% else %}null{% endif %};
+let currentStep = 1;
+
+function selectAddress(element, id) {
+    document.querySelectorAll('.address-card').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    selectedAddressId = id;
+}
+
+function toggleNewAddress() {
+    const el = document.getElementById('new-address-form');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveNewAddress() {
+    const data = {
+        first_name: document.getElementById('fn').value,
+        last_name: document.getElementById('ln').value,
+        phone: document.getElementById('ph').value,
+        street_address: document.getElementById('sa').value,
+        city: document.getElementById('city').value,
+        state: document.getElementById('state').value,
+        postal_code: document.getElementById('pc').value,
+        country: document.getElementById('country').value,
+        title: 'New Address'
+    };
+    
+    if (!data.first_name || !data.street_address || !data.phone) {
+        alert("Please fill all required fields.");
+        return;
+    }
+    
+    fetch('{% url "add_address_ajax" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify(data)
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            const addrContainer = document.querySelector('.address-grid');
+            
+            const newCard = document.createElement('div');
+            newCard.className = 'address-card selected';
+            newCard.onclick = function() { selectAddress(this, data.id); };
+            newCard.innerHTML = `
+                <h4 style="margin: 0 0 0.5rem 0;">${data.title}</h4>
+                <p style="margin: 0; color: var(--text-secondary); line-height: 1.5;">
+                    ${data.text}
+                </p>
+            `;
+            
+            document.querySelectorAll('.address-card').forEach(el => el.classList.remove('selected'));
+            addrContainer.appendChild(newCard);
+            selectedAddressId = data.id;
+            
+            document.getElementById('new-address-form').style.display = 'none';
+            document.getElementById('addressForm').reset();
+            
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function goToStep(step) {
+    if(step > 1 && !selectedAddressId) {
+        alert("Please select or add a shipping address.");
+        return;
+    }
+    
+    currentStep = step;
+    
+    document.querySelectorAll('.checkout-steps-content > div').forEach(el => el.classList.remove('active'));
+    document.getElementById('content-step' + step).classList.add('active');
+    
+    for(let i=1; i<=3; i++) {
+        const ind = document.getElementById('ind-step' + i);
+        ind.classList.remove('active', 'completed');
+        if (i < step) ind.classList.add('completed');
+        else if (i === step) ind.classList.add('active');
+    }
+    
+    const payBtn = document.getElementById('main-pay-btn');
+    if (step === 3) {
+        payBtn.style.display = 'block';
+    } else {
+        payBtn.style.display = 'none';
+    }
+}
+
+function applyCoupon() {
+    const code = document.getElementById('coupon_code').value;
+    const msg = document.getElementById('coupon-msg');
+    
+    fetch('{% url "apply_coupon_ajax" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({code: code})
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            msg.style.color = '#10b981';
+            msg.textContent = '\u2713 Coupon applied successfully!';
+            
+            document.getElementById('sum-sub').textContent = data.cart_subtotal;
+            document.getElementById('sum-disc').textContent = data.cart_discount;
+            document.getElementById('sum-total').textContent = data.cart_total;
+            
+        } else {
+            msg.style.color = '#ef4444';
+            msg.textContent = data.error;
+        }
+    });
+}
+
+function processPayment() {
+    const btn = document.getElementById('main-pay-btn');
+    const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+    
+    if (paymentMethod === 'cod') {
+        alert('Cash on Delivery selected. This would process a COD order.');
+        // Implement COD logic here later. For now we just alert.
+        return;
+    }
+
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
+    
+    const isSplit = document.getElementById('split_payment_toggle') ? document.getElementById('split_payment_toggle').checked : false;
+    
+    fetch('{% url "process_checkout_ajax" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+            address_id: selectedAddressId, 
+            payment_method: paymentMethod,
+            is_split: isSplit
+        })
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            var options = {
+                "key": data.key,
+                "amount": data.amount,
+                "currency": data.currency,
+                "name": "AEON",
+                "description": "Order " + data.order_number,
+                "order_id": data.razorpay_order_id,
+                "handler": function (response){
+                    verifyPayment(response);
+                },
+                "prefill": {
+                    "name": data.user_name,
+                    "email": data.user_email,
+                    "contact": data.user_phone
+                },
+                "theme": { "color": "#000000" }
+            };
+            
+            // Prefill payment method in Razorpay modal based on user selection
+            if(paymentMethod === 'razorpay_card') {
+                options.prefill.method = 'card';
+            } else if(paymentMethod === 'razorpay_upi') {
+                options.prefill.method = 'upi';
+            } else if(paymentMethod === 'razorpay_netbanking') {
+                options.prefill.method = 'netbanking';
+            }
+
+            var rzp = new Razorpay(options);
+            rzp.on('payment.failed', function (response){
+                alert("Payment Failed: " + response.error.description);
+                btn.textContent = 'Pay Securely';
+                btn.disabled = false;
+            });
+            rzp.open();
+        } else {
+            alert(data.error);
+            btn.textContent = 'Pay Securely';
+            btn.disabled = false;
+        }
+    }).catch(err => {
+        alert("An error occurred");
+        btn.textContent = 'Pay Securely';
+        btn.disabled = false;
+    });
+}
+
+
+function verifyPayment(response) {
+    const btn = document.getElementById('main-pay-btn');
+    btn.textContent = 'Verifying...';
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('razorpay_payment_id', response.razorpay_payment_id);
+    formData.append('razorpay_order_id', response.razorpay_order_id);
+    formData.append('razorpay_signature', response.razorpay_signature);
+    formData.append('is_ajax', 'true');
+    
+    fetch('{% url "payment_verify" %}', {
+        method: 'POST',
+        body: formData
+    }).then(res => res.json()).then(data => {
+        if (data.status === 'success') {
+            btn.classList.add('btn-success-state');
+            btn.innerHTML = '\u2713 Order Confirmed';
+            setTimeout(() => {
+                let successUrl = '{% url "order_success" "99999999" %}'.replace('99999999', data.order_number);
+                window.location.href = successUrl;
+            }, 1000);
+        } else {
+            alert("Verification Failed: " + (data.error || 'Unknown error'));
+            btn.textContent = 'Pay Securely';
+            btn.disabled = false;
+        }
+    }).catch(err => {
+        alert("Verification request failed");
+        btn.textContent = 'Pay Securely';
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}
+

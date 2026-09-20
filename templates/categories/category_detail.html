@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ current_node.meta_title|default:current_node.name }} | AEON{% endblock %}
+{% block meta_description %}{{ current_node.meta_description|default:current_node.description }}{% endblock %}
+
+{% block content %}
+<div class="container section">
+
+    <!-- Breadcrumbs -->
+    <nav style="margin-bottom: 2rem; font-size: 0.9rem; color: var(--text-secondary);">
+        <a href="{% url 'home' %}" style="color: var(--text-color); text-decoration: none;">Home</a>
+        {% for crumb in breadcrumbs %}
+            <span style="margin: 0 0.5rem;">/</span>
+            {% if forloop.last %}
+                <span style="color: var(--primary-color); font-weight: 500;">{{ crumb.name }}</span>
+            {% else %}
+                {% if crumb.level == 0 %}
+                    <a href="{% url 'category_detail' crumb.slug %}" style="color: var(--text-color); text-decoration: none;">{{ crumb.name }}</a>
+                {% elif crumb.level == 1 %}
+                    <a href="{% url 'subcategory_detail' category.slug crumb.slug %}" style="color: var(--text-color); text-decoration: none;">{{ crumb.name }}</a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    </nav>
+    
+    <!-- Banner -->
+    <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 3rem; margin-bottom: 3rem; text-align: center; position: relative; overflow: hidden;">
+        {% if current_node.banner_image %}
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('{{ current_node.banner_image.url }}') center/cover; opacity: 0.2; z-index: 0;"></div>
+        {% endif %}
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 3rem; margin-bottom: 1rem;">{{ current_node.name }}</h1>
+            {% if current_node.description %}
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto;">{{ current_node.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Subcategory Navigation -->
+    {% with children=current_node.get_children %}
+    {% if children %}
+    <div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 2rem; scrollbar-width: none;">
+        {% for child in children %}
+            {% if child.is_active %}
+                <a href="
+                    {% if child.level == 1 %}{% url 'subcategory_detail' category.slug child.slug %}
+                    {% else %}{% url 'child_category_detail' category.slug subcategory.slug child.slug %}{% endif %}
+                " style="display: inline-block; padding: 0.75rem 1.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 99px; white-space: nowrap; transition: all 0.3s;" class="hover-primary">
+                    {{ child.name }}
+                </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    
+    <!-- Product Listing -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <span style="color: var(--text-secondary);">Showing {{ products|length }} products</span>
+        <form method="GET">
+            <select name="sort" onchange="this.form.submit()" style="padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: transparent; color: var(--text-color);">
+                <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest Arrivals</option>
+                <option value="price" {% if request.GET.sort == 'price' %}selected{% endif %}>Price: Low to High</option>
+                <option value="-price" {% if request.GET.sort == '-price' %}selected{% endif %}>Price: High to Low</option>
+                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name: A-Z</option>
+            </select>
+        </form>
+    </div>
+
+    <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem;">
+        {% for product in products %}
+            {% include 'components/product_card.html' with product=product %}
+        {% empty %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-lg);">
+                <i class="ph ph-package" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <h3>No products found</h3>
+                <p>We couldn't find any products in this category.</p>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <div class="pagination" style="margin-top: 4rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if products.has_previous %}
+            <a href="?page={{ products.previous_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="btn">&laquo;</a>
+        {% endif %}
+        
+        <span class="btn" style="background: var(--text-color); color: var(--bg-color);">{{ products.number }}</span>
+        
+        {% if products.has_next %}
+            <a href="?page={{ products.next_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="btn">&raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .hover-primary:hover {
+        background: var(--text-color) !important;
+        color: var(--bg-color) !important;
+        border-color: var(--text-color) !important;
+    }
+</style>
+{% endblock %}

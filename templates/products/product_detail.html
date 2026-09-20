@@ -1,0 +1,852 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} | AEON{% endblock %}
+
+
+{% block content %}
+<style>
+    /* Premium Gallery Styles */
+    .pdp-gallery {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        flex-direction: row-reverse;
+    }
+    .main-image-container {
+        flex-grow: 1;
+        overflow: hidden;
+        position: relative;
+        cursor: zoom-in;
+        background: #f8f8f8;
+        border-radius: 8px;
+    }
+    .main-image-container img {
+        width: 100%;
+        height: auto;
+        display: block;
+        transition: transform 0.4s ease, opacity 0.3s ease;
+        transform-origin: center center;
+    }
+    .main-image-container:hover img {
+        transform: scale(1.5);
+    }
+    .thumbnail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 90px;
+    }
+    .thumbnail-btn {
+        width: 90px;
+        height: 90px;
+        border: 2px solid transparent;
+        padding: 0;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.3s ease, border-color 0.3s ease;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #f8f8f8;
+    }
+    .thumbnail-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .thumbnail-btn.active, .thumbnail-btn:hover {
+        opacity: 1;
+        border-color: #000;
+    }
+
+    /* UGC Masonry & Modal */
+    .ugc-masonry {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+        margin-bottom: 2rem;
+    }
+    .ugc-item {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 4/5;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        background: #eee;
+    }
+    .ugc-item img, .ugc-item video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    .ugc-item:hover img, .ugc-item:hover video {
+        transform: scale(1.05);
+    }
+    .ugc-item .play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.5);
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        pointer-events: none;
+    }
+
+    .ugc-modal {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.95);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .ugc-close {
+        position: absolute;
+        top: 20px; right: 30px;
+        color: white;
+        font-size: 40px;
+        cursor: pointer;
+        z-index: 10000;
+    }
+    .ugc-modal-content {
+        display: flex;
+        width: 90%;
+        max-width: 1200px;
+        height: 85vh;
+        background: #111;
+        border-radius: 12px;
+        overflow: hidden;
+        color: white;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .ugc-media-col {
+        flex: 2;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .ugc-media-col img, .ugc-media-col video {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .ugc-info-col {
+        flex: 1;
+        padding: 40px 30px;
+        display: flex;
+        flex-direction: column;
+        background: #1a1a1a;
+        border-left: 1px solid #333;
+    }
+    .ugc-author-info { font-weight: 600; margin-bottom: 5px; font-size: 1.1rem; }
+    .ugc-date { font-size: 0.85rem; color: #888; margin-bottom: 20px; }
+    .ugc-rating { color: #fbbf24; margin-bottom: 20px; font-size: 1.2rem; }
+    .ugc-comment { flex-grow: 1; overflow-y: auto; line-height: 1.6; color: #e5e5e5; font-size: 1rem; }
+    
+    .ugc-product-mini {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .ugc-product-mini img {
+        width: 60px; height: 60px; border-radius: 6px; object-fit: cover; background: #fff;
+    }
+    .ugc-product-mini h4 { margin: 0 0 5px 0; font-size: 0.95rem; }
+    .ugc-product-mini p { margin: 0; font-size: 0.9rem; color: #aaa; }
+    .ugc-product-mini .btn { padding: 8px 15px; margin-left: auto; white-space: nowrap; }
+
+    @media (max-width: 768px) {
+        .ugc-modal-content { flex-direction: column; height: 95vh; width: 95%; }
+        .ugc-media-col { flex: 1; min-height: 50vh; }
+        .ugc-info-col { flex: none; height: auto; padding: 20px; }
+    }
+</style>
+
+<div class="container pdp-layout">
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs animate-on-scroll">
+        <a href="/">Home</a> / 
+        <a href="{% url 'shop' %}">Shop</a> / 
+        <a href="{% url 'shop' %}?category={{ product.category.slug }}">{{ product.category.name }}</a> / 
+        <span>{{ product.name }}</span>
+    </nav>
+
+    <div class="pdp-grid">
+        <!-- Image Gallery -->
+        <div class="pdp-gallery animate-on-scroll">
+            <div class="main-image-container" id="main-image-container">
+                {% if product.images.first %}
+                    <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" id="main-product-image">
+                {% else %}
+                    <div class="placeholder-image"></div>
+                {% endif %}
+            </div>
+            <div class="thumbnail-list">
+                {% for img in product.images.all %}
+                    <button class="thumbnail-btn {% if forloop.first %}active{% endif %}" data-image="{{ img.image.url }}">
+                        <img src="{{ img.image.url }}" alt="Thumbnail">
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="pdp-info animate-on-scroll">
+            {% if product.brand %}
+                <div class="pdp-brand">{{ product.brand.name }}</div>
+            {% endif %}
+            <h1 class="pdp-title">{{ product.name }}</h1>
+            
+            <div class="pdp-price">
+                {% if product.discount_price %}
+                    <span class="price-original">${{ product.price }}</span>
+                    <span class="price-current">${{ product.discount_price }}</span>
+                {% else %}
+                    <span class="price-current">${{ product.price }}</span>
+                {% endif %}
+                {% if trending_upward %}
+                    <span style="background: #ff4d4f; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-left: 10px; vertical-align: middle;">🔥 High Demand</span>
+                {% endif %}
+            </div>
+
+            <p class="pdp-short-desc">{{ product.short_description|default:product.description|truncatewords:20 }}</p>
+
+            {% if ai_insight %}
+            <div class="ai-insight-block" style="background: linear-gradient(to right, #fdfbfb, #ebedee); padding: 1rem; border-radius: 8px; border-left: 4px solid #6366f1; margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: flex-start;">
+                <i class="ph ph-sparkle" style="color: #6366f1; font-size: 1.5rem; margin-top: 2px;"></i>
+                <div>
+                    <h4 style="margin: 0 0 5px 0; font-size: 0.95rem; color: #333;">✨ AI Insight</h4>
+                    <p style="margin: 0; font-size: 0.9rem; color: #555; line-height: 1.5;">{{ ai_insight }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <form action="{% url 'cart_add' product.id %}" method="post" class="add-to-cart-form">
+                {% csrf_token %}
+                
+                {% if product.variants.exists %}
+                <div class="pdp-variants">
+                    <h4>Variant</h4>
+                    <select name="variant_id" required>
+                        <option value="">Select an option</option>
+                        {% for variant in product.variants.all %}
+                            <option value="{{ variant.id }}" {% if not variant.stock %}disabled{% endif %}>
+                                {{ variant.name }} {% if not variant.stock %}(Out of Stock){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="pdp-actions">
+                    <div class="qty-selector">
+                        <button type="button" class="qty-btn minus">-</button>
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity|default:10 }}">
+                        <button type="button" class="qty-btn plus">+</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary add-to-cart-btn" {% if not product.stock_quantity and not product.variants.exists %}disabled{% endif %}>
+                        {% if not product.stock_quantity and not product.variants.exists %}Out of Stock{% else %}Add to Cart{% endif %}
+                    </button>
+                    <button type="submit" formaction="{% url 'wishlist_toggle' product.id %}" class="btn icon-btn wishlist-add">
+                        <i class="ph ph-heart"></i>
+                    </button>
+                </div>
+            </form>
+            
+            <form action="{% url 'create_group_buy' product.id %}" method="post" style="margin-top: 1rem;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline" style="width: 100%; border-color: #6366f1; color: #6366f1;">
+                    <i class="ph ph-users"></i> Buy with Friends (Save 15%)
+                </button>
+            </form>
+
+            <div class="pdp-details">
+                <div class="detail-section">
+                    <h3>Description</h3>
+                    <div class="detail-content">{{ product.description|linebreaks }}</div>
+                </div>
+                
+                {% if price_history %}
+                <div class="detail-section" style="margin-top: 2rem;">
+                    <h3>Price History</h3>
+                    <div style="height: 250px; width: 100%;">
+                        <canvas id="priceHistoryChart"></canvas>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <section class="section animate-on-scroll">
+        <h2 class="section-title">Customer Reviews</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 3rem; margin-top: 2rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="font-size: 3.5rem; font-weight: 700; line-height: 1;">{{ avg_rating }}</div>
+                    <div>
+                        <div style="color: #fbbf24; font-size: 1.25rem;">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= avg_rating|add:"0" %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">{{ total_reviews }} global ratings</div>
+                    </div>
+                </div>
+
+                <div class="review-bars" style="margin-bottom: 2.5rem;">
+                    {% for stars, percentage in rating_distribution.items %}
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.9rem;">
+                        <div style="width: 50px; color: #444; font-weight: 500;">{{ stars }} star</div>
+                        <div style="flex-grow: 1; height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden;">
+                            <div style="height: 100%; background: #fbbf24; width: 0%; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);" data-width="{{ percentage }}%"></div>
+                        </div>
+                        <div style="width: 45px; text-align: right; color: #666; font-weight: 500;">{{ percentage }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin-bottom: 2rem;">
+                
+                <h3 style="margin-bottom: 0.5rem;">Review this product</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Share your thoughts with other customers</p>
+                
+                {% if user.is_authenticated %}
+                <button class="btn btn-outline" style="width: 100%;" onclick="document.getElementById('review-form').style.display='block'; this.style.display='none';">Write a customer review</button>
+                <form id="review-form" action="{% url 'add_review' product.id %}" method="post" enctype="multipart/form-data" style="display: none; background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
+                    {% csrf_token %}
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Overall rating</label>
+                        <select name="rating" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background: white;">
+                            <option value="5">5 - Excellent</option>
+                            <option value="4">4 - Good</option>
+                            <option value="3">3 - Average</option>
+                            <option value="2">2 - Fair</option>
+                            <option value="1">1 - Poor</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Add a written review</label>
+                        <textarea name="comment" rows="5" placeholder="What did you like or dislike? What did you use this product for?" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background: white; font-family: inherit;"></textarea>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Add Photo or Video</label>
+                        <input type="file" name="media" accept="image/*,video/*" multiple style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: white;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Review</button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline" style="width: 100%; text-align: center; display: block;">Sign in to write a review</a>
+                {% endif %}
+            </div>
+            
+            <div>
+                <h3>Customer Photos & Videos</h3>
+                {% if review_media_list %}
+                <div class="ugc-masonry">
+                    {% for media in review_media_list %}
+                        <div class="ugc-item" onclick="openUgcModal({{ forloop.counter0 }})">
+                            {% if media.type == 'image' %}
+                                <img src="{{ media.url }}" alt="Review Photo" loading="lazy">
+                            {% elif media.type == 'video' %}
+                                <video src="{{ media.url }}" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+                                <div class="play-icon">▶</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <h3 style="margin-top: 2rem;">Recent Reviews</h3>
+                {% if reviews %}
+                    {% for review in reviews|dictsortreversed:"created_at"|slice:":10" %}
+                    <div style="margin-top: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #555;">
+                                {{ review.user.email|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <strong style="font-size: 0.95rem; display: block;">{{ review.user.email|truncatechars:15 }}</strong>
+                                {% if review.is_verified %}
+                                <span style="color: #10b981; font-size: 0.75rem; font-weight: 500;">✓ Verified Purchase</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <div style="color: #fbbf24; font-size: 1rem;">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </div>
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">Reviewed on {{ review.created_at|date:"F d, Y" }}</span>
+                        </div>
+                        <p style="margin: 0; color: #333; font-size: 0.95rem; line-height: 1.5;">{{ review.comment }}</p>
+                        
+                        {% if review.media.all %}
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            {% for media in review.media.all %}
+                                {% if media.media_type == 'image' %}
+                                    <img src="{{ media.file.url }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" alt="Review Media">
+                                {% else %}
+                                    <video src="{{ media.file.url }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;"></video>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">No reviews yet. Be the first to review this product!</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {% if recommended_products %}
+    <style>
+        .premium-carousel-container {
+            position: relative;
+            margin-top: 2rem;
+        }
+        .premium-carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 24px;
+            padding-bottom: 20px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            scroll-behavior: smooth;
+        }
+        .premium-carousel::-webkit-scrollbar {
+            display: none;
+        }
+        .premium-carousel > div {
+            flex: 0 0 calc(25% - 18px);
+            scroll-snap-align: start;
+            min-width: 260px;
+        }
+        @media (max-width: 1024px) {
+            .premium-carousel > div { flex: 0 0 calc(33.333% - 16px); }
+        }
+        @media (max-width: 768px) {
+            .premium-carousel > div { flex: 0 0 calc(50% - 12px); min-width: 200px; }
+        }
+        @media (max-width: 480px) {
+            .premium-carousel > div { flex: 0 0 calc(100% - 24px); }
+        }
+    </style>
+    
+    <section class="section related-section" style="margin-top: 4rem;">
+        <div class="related-products animate-on-scroll">
+            <div class="section-header">
+                <h2>Customers Also Bought</h2>
+            </div>
+            <div class="premium-carousel-container">
+                <div class="premium-carousel">
+                    {% for rel_product in recommended_products %}
+                        <div>
+                            {% include 'components/product_card.html' with product=rel_product %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<!-- FOMO Toast -->
+<div id="fomo-toast" class="fomo-toast animate-on-scroll">
+    <i class="ph ph-fire" style="color: #ef4444; font-size: 1.5rem;"></i>
+    <span><strong id="fomo-viewer-count">1</strong> people are viewing this right now</span>
+</div>
+
+<style>
+.fomo-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fomo-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productId = '{{ product.id }}';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(protocol + '//' + window.location.host + '/ws/product/' + productId + '/');
+    
+    const toast = document.getElementById('fomo-toast');
+    const countEl = document.getElementById('fomo-viewer-count');
+    let toastTimeout;
+
+    ws.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if(data.type === 'viewer_count') {
+            const count = data.count;
+            if(count > 1) {
+                countEl.textContent = count;
+                toast.classList.add('show');
+                
+                // Auto hide after 5 seconds to not be annoying
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 5000);
+            } else {
+                toast.classList.remove('show');
+            }
+        }
+    };
+    
+    ws.onclose = function(e) {
+        console.log('Chat socket closed unexpectedly');
+    };
+});
+</script>
+
+<!-- UGC Modal -->
+<div id="ugcModal" class="ugc-modal" style="display:none;">
+    <span class="ugc-close" onclick="closeUgcModal()">&times;</span>
+    <div class="ugc-modal-content">
+        <div class="ugc-media-col" id="ugcMediaContainer">
+            <!-- Media injected here -->
+        </div>
+        <div class="ugc-info-col">
+            <div>
+                <div class="ugc-author-info" id="ugcAuthor"></div>
+                <div class="ugc-date" id="ugcDate"></div>
+                <div class="ugc-rating" id="ugcRating"></div>
+            </div>
+            <div class="ugc-comment" id="ugcComment"></div>
+            
+            <div class="ugc-product-mini">
+                {% if product.images.first %}
+                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                <div style="width:60px; height:60px; background:#444; border-radius:6px;"></div>
+                {% endif %}
+                <div>
+                    <h4>{{ product.name|truncatechars:30 }}</h4>
+                    <p>${% if product.discount_price %}{{ product.discount_price }}{% else %}{{ product.price }}{% endif %}</p>
+                </div>
+                <form action="{% url 'cart_add' product.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const reviewMediaList = {{ review_media_json|safe }};
+    
+    function openUgcModal(index) {
+        const modal = document.getElementById('ugcModal');
+        const mediaContainer = document.getElementById('ugcMediaContainer');
+        const authorEl = document.getElementById('ugcAuthor');
+        const dateEl = document.getElementById('ugcDate');
+        const ratingEl = document.getElementById('ugcRating');
+        const commentEl = document.getElementById('ugcComment');
+        
+        const media = reviewMediaList[index];
+        if(!media) return;
+        
+        if (media.type === 'image') {
+            mediaContainer.innerHTML = `<img src="${media.url}" alt="Review Image">`;
+        } else {
+            mediaContainer.innerHTML = `<video src="${media.url}" controls autoplay loop></video>`;
+        }
+        
+        authorEl.textContent = media.user.split('@')[0];
+        dateEl.textContent = `Reviewed on ${media.created_at}`;
+        
+        let stars = '';
+        for(let i=1; i<=5; i++) {
+            stars += (i <= media.review_rating) ? '★' : '☆';
+        }
+        ratingEl.textContent = stars;
+        commentEl.textContent = media.review_comment;
+        
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeUgcModal() {
+        document.getElementById('ugcModal').style.display = 'none';
+        document.getElementById('ugcMediaContainer').innerHTML = ''; // Stop video playback
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Close on click outside
+    document.getElementById('ugcModal').addEventListener('click', function(e) {
+        if(e.target === this) {
+            closeUgcModal();
+        }
+    });
+
+    // Image gallery logic
+    const thumbnails = document.querySelectorAll('.thumbnail-btn');
+    const mainImage = document.getElementById('main-product-image');
+    const mainImageContainer = document.getElementById('main-image-container');
+
+    thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', function() {
+            thumbnails.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            if (mainImage) {
+                // Smooth transition effect
+                mainImage.style.opacity = 0;
+                setTimeout(() => {
+                    mainImage.src = this.dataset.image;
+                    mainImage.style.opacity = 1;
+                }, 150);
+            }
+        });
+    });
+    
+    // Hover Zoom Logic
+    if (mainImageContainer && mainImage) {
+        mainImageContainer.addEventListener('mousemove', function(e) {
+            const rect = mainImageContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left; // x position within the element.
+            const y = e.clientY - rect.top;  // y position within the element.
+            
+            // Calculate percentages
+            const xPercent = (x / rect.width) * 100;
+            const yPercent = (y / rect.height) * 100;
+            
+            // Update transform origin
+            mainImage.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+        });
+        
+        mainImageContainer.addEventListener('mouseleave', function() {
+            // Reset to center
+            mainImage.style.transformOrigin = 'center center';
+        });
+    }
+
+    // Quantity selector logic
+    const minusBtn = document.querySelector('.qty-btn.minus');
+    const plusBtn = document.querySelector('.qty-btn.plus');
+    const qtyInput = document.querySelector('input[name="quantity"]');
+
+    if(minusBtn && plusBtn && qtyInput) {
+        minusBtn.addEventListener('click', () => {
+            if(qtyInput.value > 1) qtyInput.value = parseInt(qtyInput.value) - 1;
+        });
+        plusBtn.addEventListener('click', () => {
+            qtyInput.value = parseInt(qtyInput.value) + 1;
+        });
+    }
+    
+    // Trigger progress bar animations on load
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            document.querySelectorAll('.review-bars [data-width]').forEach(el => {
+                el.style.width = el.getAttribute('data-width');
+            });
+        }, 100);
+    });
+</script>
+
+<!-- FOMO Toast -->
+<div id="fomo-toast" class="fomo-toast">
+    <i id="fomo-icon" class="ph ph-fire" style="color: #ef4444; font-size: 1.5rem;"></i>
+    <span id="fomo-message"></span>
+</div>
+
+<style>
+.fomo-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fomo-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productId = '{{ product.id }}';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    
+    // Fail gracefully if WebSockets are down
+    let ws;
+    try {
+        ws = new WebSocket(protocol + '//' + window.location.host + '/ws/product/' + productId + '/');
+        
+        const toast = document.getElementById('fomo-toast');
+        const msgEl = document.getElementById('fomo-message');
+        const iconEl = document.getElementById('fomo-icon');
+        let toastTimeout;
+
+        function showToast(message, iconClass="ph-fire", iconColor="#ef4444") {
+            msgEl.innerHTML = message;
+            iconEl.className = `ph ${iconClass}`;
+            iconEl.style.color = iconColor;
+            
+            toast.classList.add('show');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        ws.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                if(data.type === 'viewer_count') {
+                    const count = data.count;
+                    if(count > 0) {
+                        showToast(`🔥 <strong>${count}</strong> people are viewing this product`, "ph-fire", "#ef4444");
+                    }
+                } else if (data.type === 'stock_update') {
+                    const stock = data.stock;
+                    if (stock > 0) {
+                        showToast(`🔥 Only <strong>${stock}</strong> left in stock!`, "ph-fire", "#ef4444");
+                    }
+                } else if (data.type === 'purchase_update') {
+                    showToast(`⚡ Someone recently purchased this`, "ph-lightning", "#eab308");
+                }
+            } catch (err) {
+                console.error("Error parsing websocket message", err);
+            }
+        };
+        
+        ws.onclose = function(e) {
+            console.log('Chat socket closed unexpectedly');
+        };
+        
+        ws.onerror = function(err) {
+            console.error('WebSocket error observed:', err);
+        };
+    } catch (err) {
+        console.error("WebSocket connection failed", err);
+    }
+});
+</script>
+
+{% if price_history %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('priceHistoryChart');
+    if (!ctx) return;
+    
+    const labels = [
+        {% for history in price_history %}
+            "{{ history.created_at|date:'M d, H:i' }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const dataPoints = [
+        {% for history in price_history %}
+            {{ history.new_price }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Price ($)',
+                data: dataPoints,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#6366f1',
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: '#f0f0f0'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ' $' + context.parsed.y;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

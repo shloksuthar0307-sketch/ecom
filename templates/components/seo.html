@@ -1,0 +1,57 @@
+{% load static %}
+<meta name="description" content="{% if product %}{{ product.short_description|default:product.description|striptags|truncatewords:30 }}{% else %}AEON - Premium minimal e-commerce.{% endif %}">
+<meta name="keywords" content="{% if product %}{{ product.name }}, {{ product.brand.name }}, {{ product.category.name }}, ecommerce{% else %}premium, minimal, ecommerce, tech, apparel{% endif %}">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="{% if product %}product{% else %}website{% endif %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:title" content="{% if product %}{{ product.name }} | AEON{% else %}AEON - Premium Store{% endif %}">
+<meta property="og:description" content="{% if product %}{{ product.short_description|default:product.description|striptags|truncatewords:30 }}{% else %}Discover the finest minimal products.{% endif %}">
+{% if product and product.images.first %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ product.images.first.image.url }}">
+{% else %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.jpg' %}">
+{% endif %}
+<meta property="og:site_name" content="AEON">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="{{ request.build_absolute_uri }}">
+<meta property="twitter:title" content="{% if product %}{{ product.name }} | AEON{% else %}AEON - Premium Store{% endif %}">
+<meta property="twitter:description" content="{% if product %}{{ product.short_description|default:product.description|striptags|truncatewords:30 }}{% else %}Discover the finest minimal products.{% endif %}">
+{% if product and product.images.first %}
+<meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ product.images.first.image.url }}">
+{% else %}
+<meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.jpg' %}">
+{% endif %}
+
+{% if product %}
+<!-- JSON-LD Structured Data for Products -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": "{{ product.name }}",
+  "image": [
+    {% for img in product.images.all %}
+    "{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "description": "{{ product.short_description|default:product.description|striptags|escapejs }}",
+  "sku": "{{ product.sku }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "{{ product.brand.name }}"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ request.build_absolute_uri }}",
+    "priceCurrency": "USD",
+    "price": "{% if product.discount_price %}{{ product.discount_price }}{% else %}{{ product.price }}{% endif %}",
+    "itemCondition": "https://schema.org/NewCondition",
+    "availability": "https://schema.org/{% if product.stock_quantity > 0 %}InStock{% else %}OutOfStock{% endif %}"
+  }
+}
+</script>
+{% endif %}

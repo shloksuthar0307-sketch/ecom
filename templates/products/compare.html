@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Compare Products | AEON{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    .compare-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    .markdown-content th, .markdown-content td {
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        text-align: left;
+    }
+    .markdown-content th {
+        background-color: var(--bg-secondary);
+        font-weight: 600;
+    }
+    .products-preview {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        overflow-x: auto;
+    }
+    .product-preview-card {
+        min-width: 200px;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="compare-container">
+    <h1 style="margin-bottom: 2rem;">Compare Products</h1>
+    
+    <div class="products-preview">
+        {% for product in products %}
+        <div class="product-preview-card">
+            <h3>{{ product.name }}</h3>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">${{ product.price }}</p>
+            <a href="{% url 'product_detail' product.slug %}" class="btn btn-sm" style="margin-top: 1rem;">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section-header" style="margin-top: 2rem;">
+        <h2>Key Differences</h2>
+        <div id="key-differences" class="markdown-content" style="margin-top: 1rem;"></div>
+    </div>
+    
+    <div class="section-header" style="margin-top: 2rem;">
+        <h2>Feature Comparison</h2>
+        <div id="comparison-table" class="markdown-content" style="margin-top: 1rem; overflow-x: auto;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const tableMarkdown = `{{ comparison.table_markdown|escapejs }}`;
+        const differencesMarkdown = `{{ comparison.key_differences|escapejs }}`;
+        
+        document.getElementById('comparison-table').innerHTML = marked.parse(tableMarkdown);
+        document.getElementById('key-differences').innerHTML = marked.parse(differencesMarkdown);
+    });
+</script>
+{% endblock %}

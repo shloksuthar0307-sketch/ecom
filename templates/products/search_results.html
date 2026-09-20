@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Results for "{{ query }}" | AEON{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div class="section-header animate-on-scroll">
+        <h1 class="page-title">Search Results</h1>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+            {% if query %}
+                Showing results for <strong>"{{ query }}"</strong> ({{ result_count }} found)
+            {% else %}
+                Enter a search term above.
+            {% endif %}
+        </p>
+    </div>
+    
+    {% if query %}
+        {% if products %}
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;" class="animate-on-scroll">
+                <form action="" method="get" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="hidden" name="q" value="{{ query }}">
+                    <label for="sort" style="font-size: 0.9rem; color: var(--text-secondary);">Sort By:</label>
+                    <select name="sort" id="sort" onchange="this.form.submit()" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #fff;">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest</option>
+                        <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                        <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                    </select>
+                </form>
+            </div>
+            
+            <div class="product-grid">
+                {% for product in products %}
+                    {% include 'components/product_card.html' with product=product %}
+                {% endfor %}
+            </div>
+            
+            {% if products.has_other_pages %}
+            <div class="pagination animate-on-scroll" style="margin-top: 3rem; display: flex; justify-content: center; gap: 0.5rem;">
+                {% if products.has_previous %}
+                    <a href="?q={{ query }}&sort={{ sort_by }}&page={{ products.previous_page_number }}" class="btn" style="padding: 0.5rem 1rem;">&laquo; Prev</a>
+                {% endif %}
+                
+                <span class="btn" style="padding: 0.5rem 1rem; background: var(--text-color); color: #fff;">
+                    Page {{ products.number }} of {{ products.paginator.num_pages }}
+                </span>
+                
+                {% if products.has_next %}
+                    <a href="?q={{ query }}&sort={{ sort_by }}&page={{ products.next_page_number }}" class="btn" style="padding: 0.5rem 1rem;">Next &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state animate-on-scroll" style="padding: 4rem 2rem; background: var(--bg-secondary); border-radius: var(--radius-lg); text-align: center; margin-top: 2rem;">
+                <i class="ph ph-magnifying-glass" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h3 style="margin-bottom: 0.5rem;">No products found</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">We couldn't find anything matching "{{ query }}".</p>
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <a href="{% url 'shop' %}" class="btn btn-primary">Browse All Products</a>
+                    <a href="{% url 'home' %}" class="btn">Return Home</a>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state animate-on-scroll" style="padding: 4rem 2rem; background: var(--bg-secondary); border-radius: var(--radius-lg); text-align: center; margin-top: 2rem;">
+            <i class="ph ph-magnifying-glass" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">What are you looking for?</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Type a keyword in the search bar above to find products.</p>
+            <a href="{% url 'shop' %}" class="btn btn-primary">Browse All Products</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

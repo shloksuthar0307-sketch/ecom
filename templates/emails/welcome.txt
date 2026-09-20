@@ -1,0 +1,11 @@
+Welcome to AEON, {{ user.first_name|default:user.email }}!
+
+Thank you for joining AEON. We're thrilled to have you as part of our community.
+
+At AEON, we believe in premium quality and minimal design. You can now checkout faster with saved addresses, track your order history, and save items to your wishlist.
+
+Explore the collection here: {{ site_url }}/shop/
+
+--
+AEON Team
+support@aeon.com

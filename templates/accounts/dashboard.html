@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}Premium Dashboard | AEON{% endblock %}
+
+{% block content %}
+<style>
+    /* Vengeance UI Variables */
+    :root {
+        --vengeance-bg: #0b0c10;
+        --vengeance-surface: #1f2833;
+        --vengeance-accent: #c5a880; /* Gold */
+        --vengeance-text: #c5c6c7;
+        --vengeance-title: #ffffff;
+        --tier-bronze: #cd7f32;
+        --tier-silver: #e5e4e2;
+        --tier-gold: #ffd700;
+        --tier-vip: #8a2be2;
+    }
+    
+    body {
+        background-color: var(--vengeance-bg);
+        color: var(--vengeance-text);
+    }
+    
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+    
+    .vengeance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(197, 168, 128, 0.2);
+        margin-bottom: 2rem;
+    }
+    
+    .vengeance-header h1 {
+        color: var(--vengeance-title);
+        margin: 0;
+        font-weight: 300;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+    
+    .tier-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #000;
+    }
+    
+    .tier-Bronze { background: var(--tier-bronze); }
+    .tier-Silver { background: var(--tier-silver); }
+    .tier-Gold { background: var(--tier-gold); }
+    .tier-VIP { background: var(--tier-vip); color: #fff; }
+    
+    /* Skiper UI Tabs */
+    .skiper-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .skiper-tab {
+        padding: 1rem 1.5rem;
+        color: var(--vengeance-text);
+        text-decoration: none;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .skiper-tab.active, .skiper-tab:hover {
+        color: var(--vengeance-accent);
+        border-bottom-color: var(--vengeance-accent);
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.4s ease forwards;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Progress Bar */
+    .loyalty-progress-container {
+        background: var(--vengeance-surface);
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(197, 168, 128, 0.1);
+    }
+    
+    .progress-track {
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        margin: 1rem 0;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--vengeance-accent), #f3e5ab);
+        border-radius: 4px;
+        width: 0%;
+        transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Animasterlib Coin-Flip */
+    .points-wallet {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(0,0,0,0.3);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border: 1px solid rgba(197, 168, 128, 0.3);
+    }
+    
+    .coin-container {
+        perspective: 1000px;
+        width: 40px;
+        height: 40px;
+    }
+    
+    .coin-flip {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        animation: animaster-coin-flip 3s infinite linear;
+    }
+    
+    .coin-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle, #ffd700 0%, #b8860b 100%);
+        border: 2px solid #daa520;
+        color: #fff;
+        font-weight: bold;
+        font-size: 1.2rem;
+        box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+    }
+    
+    .coin-back {
+        transform: rotateY(180deg);
+        background: radial-gradient(circle, #b8860b 0%, #ffd700 100%);
+    }
+    
+    @keyframes animaster-coin-flip {
+        0% { transform: rotateY(0deg); }
+        100% { transform: rotateY(360deg); }
+    }
+    
+    /* Order Visual Tracking Dots */
+    .order-timeline {
+        display: flex;
+        align-items: center;
+        margin: 2rem 0;
+        position: relative;
+    }
+    
+    .order-timeline::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: rgba(255,255,255,0.1);
+        z-index: 1;
+    }
+    
+    .timeline-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--vengeance-surface);
+        border: 2px solid rgba(255,255,255,0.2);
+        position: relative;
+        z-index: 2;
+        margin-right: auto;
+    }
+    
+    .timeline-dot.completed {
+        background: var(--vengeance-accent);
+        border-color: var(--vengeance-accent);
+        box-shadow: 0 0 10px var(--vengeance-accent);
+    }
+    
+    .timeline-step {
+        text-align: center;
+        flex: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .timeline-label {
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
+    }
+    .timeline-dot.completed + .timeline-label {
+        color: var(--vengeance-accent);
+    }
+    
+    /* Vengeance Card */
+    .vengeance-card {
+        background: var(--vengeance-surface);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--vengeance-accent);
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="vengeance-header">
+        <h1>Welcome, {{ user.email }}</h1>
+        <div class="tier-badge tier-{{ profile.current_tier }}">
+            {{ profile.current_tier }} TIER
+        </div>
+    </div>
+    
+    <div class="skiper-tabs">
+        <div class="skiper-tab active" onclick="switchTab('overview')">Overview</div>
+        <div class="skiper-tab" onclick="switchTab('orders')">Orders</div>
+        <div class="skiper-tab" onclick="switchTab('wallet')">Points Wallet</div>
+        <div class="skiper-tab" onclick="switchTab('lookbook')">Saved Outfits</div>
+    </div>
+    
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview" class="tab-content active">
+        <div class="loyalty-progress-container">
+            <h3>Loyalty Status</h3>
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 1rem;">Lifetime Spent: ${{ profile.lifetime_spent }}</p>
+            
+            <div class="progress-track">
+                <div class="progress-fill" style="width: {{ profile.progress_percentage }}%;"></div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--vengeance-accent);">
+                <span>{{ profile.current_tier }}</span>
+                {% if profile.next_tier %}
+                <span>Spend ${{ profile.spend_to_next_tier|floatformat:2 }} more to reach {{ profile.next_tier.name }}</span>
+                {% else %}
+                <span>Max Tier Reached</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <h3 style="margin-bottom: 1rem;">Recent Addresses</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            {% for address in addresses|slice:":2" %}
+                <div class="vengeance-card">
+                    <strong>{{ address.title }}</strong><br>
+                    <span style="color: rgba(255,255,255,0.6);">{{ address.street_address }}, {{ address.city }}</span>
+                </div>
+            {% empty %}
+                <p style="color: rgba(255,255,255,0.5);">No addresses found.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- ORDERS TAB -->
+    <div id="tab-orders" class="tab-content">
+        <h3>Recent Orders</h3>
+        <p style="color: rgba(255,255,255,0.5); margin-bottom: 2rem;">Visual tracking of your latest purchases.</p>
+        
+        <div class="vengeance-card" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <strong>Order #ORD-73928</strong>
+                <span style="color: var(--vengeance-accent);">$120.00</span>
+            </div>
+            <div class="order-timeline">
+                <div class="timeline-step">
+                    <div class="timeline-dot completed"></div>
+                    <div class="timeline-label">Placed</div>
+                </div>
+                <div class="timeline-step">
+                    <div class="timeline-dot completed"></div>
+                    <div class="timeline-label">Processing</div>
+                </div>
+                <div class="timeline-step">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-label">Shipped</div>
+                </div>
+                <div class="timeline-step">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-label">Delivered</div>
+                </div>
+            </div>
+        </div>
+        <p style="color: rgba(255,255,255,0.5); font-style: italic;">* Placeholder tracking display for UI showcase.</p>
+    </div>
+    
+    <!-- POINTS WALLET TAB -->
+    <div id="tab-wallet" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+            <div>
+                <h3>AEON Rewards Wallet</h3>
+                <p style="color: rgba(255,255,255,0.5);">Use points to redeem exclusive merchandise.</p>
+            </div>
+            <div class="points-wallet">
+                <div class="coin-container">
+                    <div class="coin-flip">
+                        <div class="coin-face">A</div>
+                        <div class="coin-back">A</div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--vengeance-accent);">{{ profile.loyalty_points }}</div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Points</div>
+                </div>
+            </div>
+        </div>
+        
+        <h4>Transaction History</h4>
+        {% if transactions %}
+            <div style="background: var(--vengeance-surface); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                {% for txn in transactions %}
+                <div style="display: flex; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div>
+                        <span style="text-transform: capitalize; font-weight: 600;">{{ txn.transaction_type }}</span>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">{{ txn.created_at|date:"M d, Y" }}</div>
+                    </div>
+                    <div style="font-weight: bold; color: {% if txn.transaction_type == 'earned' %}#4caf50{% else %}#f44336{% endif %};">
+                        {% if txn.transaction_type == 'earned' %}+{% else %}-{% endif %}{{ txn.amount }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: rgba(255,255,255,0.5);">No recent transactions.</p>
+        {% endif %}
+    </div>
+    
+    <!-- LOOKBOOK TAB -->
+    <div id="tab-lookbook" class="tab-content">
+        <h3>Saved Outfits</h3>
+        <p style="color: rgba(255,255,255,0.5); margin-bottom: 2rem;">Curated styles saved from the Lookbook connection.</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+            <!-- Placeholder Outfits -->
+            <div style="background: var(--vengeance-surface); border-radius: 8px; overflow: hidden; border: 1px solid rgba(197, 168, 128, 0.2);">
+                <div style="height: 250px; background: #333; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3);">Outfit Image</div>
+                <div style="padding: 1rem;">
+                    <strong>Urban Stealth</strong>
+                    <div style="font-size: 0.8rem; color: var(--vengeance-accent); margin-top: 0.5rem;">View Collection →</div>
+                </div>
+            </div>
+            <div style="background: var(--vengeance-surface); border-radius: 8px; overflow: hidden; border: 1px solid rgba(197, 168, 128, 0.2);">
+                <div style="height: 250px; background: #333; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3);">Outfit Image</div>
+                <div style="padding: 1rem;">
+                    <strong>Neon Drift</strong>
+                    <div style="font-size: 0.8rem; color: var(--vengeance-accent); margin-top: 0.5rem;">View Collection →</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.skiper-tab').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Show selected tab
+        document.getElementById('tab-' + tabId).classList.add('active');
+        
+        // Highlight clicked tab button
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Animate progress bar on load
+    setTimeout(() => {
+        const fills = document.querySelectorAll('.progress-fill');
+        fills.forEach(fill => {
+            const targetWidth = fill.style.width;
+            fill.style.width = '0%';
+            setTimeout(() => {
+                fill.style.width = targetWidth;
+            }, 100);
+        });
+    }, 100);
+</script>
+{% endblock %}

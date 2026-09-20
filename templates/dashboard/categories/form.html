@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Category | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{% url 'dashboard_category_list' %}" style="color: var(--text-secondary);"><i class="ph ph-arrow-left" style="font-size: 1.5rem;"></i></a>
+            <h1 style="margin: 0;">
+                {% if is_edit %}Edit {{ category.name }}{% else %}Add 
+                    {% if level == 0 %}Root Category
+                    {% elif level == 1 %}Subcategory
+                    {% elif level == 2 %}Child Category
+                    {% endif %}
+                {% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 2rem; border: 1px solid var(--border-color); max-width: 800px;">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label for="name" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Name *</label>
+                    <input type="text" id="name" name="name" value="{{ category.name|default:'' }}" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+                </div>
+                <div>
+                    <label for="slug" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Slug *</label>
+                    <input type="text" id="slug" name="slug" value="{{ category.slug|default:'' }}" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+                </div>
+            </div>
+
+            {% if level > 0 %}
+                {% if level == 1 %}
+                    <div style="margin-bottom: 1.5rem;">
+                        <label for="parent" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Parent Root Category *</label>
+                        <select id="parent" name="parent" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+                            <option value="">Select Root Category</option>
+                            {% for root in root_categories %}
+                                <option value="{{ root.id }}" {% if category.parent_id == root.id %}selected{% endif %}>{{ root.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% elif level == 2 %}
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <label for="root_category" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Root Category *</label>
+                            <select id="root_category" name="root_category" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+                                <option value="">Select Root Category</option>
+                                {% for root in root_categories %}
+                                    <option value="{{ root.id }}" {% if current_root and current_root.id == root.id %}selected{% endif %}>{{ root.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="parent" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Parent Subcategory *</label>
+                            <select id="parent" name="parent" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+                                <option value="">Select Subcategory</option>
+                                {% if category.parent %}
+                                    <option value="{{ category.parent.id }}" selected>{{ category.parent.name }}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            <div style="margin-bottom: 1.5rem;">
+                <label for="description" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Description</label>
+                <textarea id="description" name="description" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color); resize: vertical;">{{ category.description|default:'' }}</textarea>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="image" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Image</label>
+                {% if category.image %}
+                    <div style="margin-bottom: 0.5rem;">
+                        <img src="{{ category.image.url }}" alt="Current Image" style="max-height: 100px; border-radius: var(--radius-sm);">
+                    </div>
+                {% endif %}
+                <input type="file" id="image" name="image" accept="image/*" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-color); color: var(--text-color);">
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_active" {% if not is_edit or category.is_active %}checked{% endif %} style="width: 1.2rem; height: 1.2rem;">
+                    <span>Active (visible on site)</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">{% if is_edit %}Save Changes{% else %}Create Category{% endif %}</button>
+                <a href="{% url 'dashboard_category_list' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if level == 2 %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const rootSelect = document.getElementById("root_category");
+        const parentSelect = document.getElementById("parent");
+        
+        function loadSubcategories(rootId, selectedId = null) {
+            if (!rootId) {
+                parentSelect.innerHTML = '<option value="">Select Subcategory</option>';
+                return;
+            }
+            
+            fetch(`{% url 'ajax_load_subcategories' %}?category_id=${rootId}`)
+                .then(response => response.json())
+                .then(data => {
+                    let options = '<option value="">Select Subcategory</option>';
+                    data.forEach(sub => {
+                        const selected = (selectedId && selectedId == sub.id) ? 'selected' : '';
+                        options += `<option value="${sub.id}" ${selected}>${sub.name}</option>`;
+                    });
+                    parentSelect.innerHTML = options;
+                })
+                .catch(err => console.error("Error loading subcategories:", err));
+        }
+
+        rootSelect.addEventListener("change", function() {
+            loadSubcategories(this.value);
+        });
+
+        // Initialize if root is pre-selected (e.g. edit mode)
+        {% if current_root %}
+            loadSubcategories({{ current_root.id }}, {% if category.parent %}{{ category.parent.id }}{% else %}null{% endif %});
+        {% endif %}
+    });
+</script>
+{% endif %}
+<script>
+    document.getElementById('name').addEventListener('input', function() {
+        if (!document.getElementById('slug').value || this.value.length > 0) {
+            let slug = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            document.getElementById('slug').value = slug;
+        }
+    });
+</script>
+{% endblock %}
