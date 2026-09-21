@@ -116,6 +116,10 @@ LOGIN_URL = 'login'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+import dj_database_url
+import os
+
+# 1. Base SQLite configuration (Automatic Fallback)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -123,10 +127,33 @@ DATABASES = {
     }
 }
 
-import dj_database_url
+# 2. Try to load from DATABASE_URL
 db_from_env = dj_database_url.config(conn_max_age=500)
+
+# 3. Alternatively, check if individual DB_* variables exist
+if not db_from_env and os.environ.get('DB_NAME') and os.environ.get('DB_USER'):
+    db_from_env = {
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+
+# 4. If PostgreSQL configuration was found, apply it and enforce schema isolation
 if db_from_env:
     DATABASES['default'].update(db_from_env)
+    
+    db_schema = os.environ.get('DB_SCHEMA', 'ecommerce_schema')
+    if 'postgresql' in DATABASES['default']['ENGINE']:
+        if 'OPTIONS' not in DATABASES['default']:
+            DATABASES['default']['OPTIONS'] = {}
+        # Make sure not to overwrite existing options if any, just add search_path
+        existing_options = DATABASES['default']['OPTIONS'].get('options', '')
+        DATABASES['default']['OPTIONS']['options'] = f'{existing_options} -c search_path={db_schema}'.strip()
+
+
 
 
 # Password validation
