@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Product{% endblock %}
+
+{% block content %}
+<div class="container section">
+    <div style="max-width: 600px; margin: 0 auto; background: var(--bg-secondary); padding: 2rem; border-radius: var(--radius-lg); text-align: center;">
+        <h2 style="color: #ef4444; margin-bottom: 1rem;">Confirm Deletion</h2>
+        <p style="margin-bottom: 2rem; color: var(--text-secondary);">
+            Are you sure you want to delete the product <strong>{{ product.name }}</strong>? 
+            This action cannot be undone.
+        </p>
+        
+        <form method="POST" style="display: flex; gap: 1rem; justify-content: center;">
+            {% csrf_token %}
+            <a href="{% url 'dashboard_products' %}" class="btn btn-outline" style="border: 1px solid var(--border-color); color: var(--text-color);">Cancel</a>
+            <button type="submit" class="btn" style="background: #ef4444; color: #fff; border: none;">Yes, Delete</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

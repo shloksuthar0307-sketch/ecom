@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container section">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1>Add New Product</h1>
+        {% if product %}<h1>Edit Product: {{ product.name }}</h1>{% else %}<h1>Add New Product</h1>{% endif %}
         <a href="{% url 'dashboard_products' %}" class="btn">Cancel</a>
     </div>
 
@@ -20,28 +20,28 @@
                 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Product Name *</label>
-                    <input type="text" name="name" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" oninput="document.getElementById('slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');">
+                    <input type="text" name="name" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" value="{% if product %}{{ product.name }}{% endif %}" oninput="document.getElementById('slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Slug *</label>
-                        <input type="text" name="slug" id="slug" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <input type="text" name="slug" id="slug" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" value="{% if product %}{{ product.slug }}{% endif %}">
                     </div>
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">SKU *</label>
-                        <input type="text" name="sku" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <input type="text" name="sku" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" value="{% if product %}{{ product.sku }}{% endif %}">
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Short Description</label>
-                    <textarea name="short_description" rows="2" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></textarea>
+                    <textarea name="short_description"  rows="2" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">{% if product %}{{ product.short_description }}{% endif %}</textarea>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Full Description *</label>
-                    <textarea name="description" required rows="6" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></textarea>
+                    <textarea name="description"  required rows="6" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">{% if product %}{{ product.description }}{% endif %}</textarea>
                 </div>
             </div>
 
@@ -82,7 +82,7 @@
                     <select name="brand" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
                         <option value="">No Brand</option>
                         {% for brand in brands %}
-                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                        <option value="{{ brand.id }}" {% if product and product.brand_id == brand.id %}selected{% endif %}>{{ brand.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -92,22 +92,28 @@
                     <select name="category" id="cat-level-0" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
                         <option value="">Select Category...</option>
                         {% for cat in categories %}
-                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        <option value="{{ cat.id }}" {% if product and product.category.get_root.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Subcategory</label>
-                    <select name="subcategory" id="cat-level-1" disabled style="width: 100%; padding: 0.75rem; background: #f9f9f9; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <select name="subcategory" id="cat-level-1" {% if not subcategories %}disabled{% endif %} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: {% if not subcategories %}#f9f9f9{% else %}#fff{% endif %};">
                         <option value="">Select Subcategory...</option>
+                        {% for sub in subcategories %}
+                        <option value="{{ sub.id }}" {% if product and product.category.get_ancestors.count >= 2 and product.category.get_ancestors.1.id == sub.id or product.category.id == sub.id %}selected{% endif %}>{{ sub.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Child Category</label>
-                    <select name="child_category" id="cat-level-2" disabled style="width: 100%; padding: 0.75rem; background: #f9f9f9; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <select name="child_category" id="cat-level-2" {% if not child_categories %}disabled{% endif %} style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: {% if not child_categories %}#f9f9f9{% else %}#fff{% endif %};">
                         <option value="">Select Child Category...</option>
+                        {% for child in child_categories %}
+                        <option value="{{ child.id }}" {% if product and product.category.id == child.id %}selected{% endif %}>{{ child.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -119,23 +125,23 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Price ($) *</label>
-                        <input type="number" step="0.01" name="price" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <input type="number" step="0.01" name="price" required style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" value="{% if product %}{{ product.price }}{% endif %}">
                     </div>
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Stock Quantity *</label>
-                        <input type="number" name="stock_quantity" required value="0" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <input type="number" name="stock_quantity" required value="{% if product %}{{ product.stock_quantity }}{% else %}0{% endif %}" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Status</label>
                     <select name="status" style="width: 100%; padding: 0.75rem; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
+                        <option value="draft" {% if product and product.status == "draft" %}selected{% endif %}>Draft</option>
+                        <option value="published" {% if product and product.status == "published" %}selected{% endif %}>Published</option>
                     </select>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem;">Save Product</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem;">{% if product %}Update Product{% else %}Save Product{% endif %}</button>
             </div>
         </div>
     </form>

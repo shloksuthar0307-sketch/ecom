@@ -1,4 +1,4 @@
-﻿from django.urls import path
+from django.urls import path
 from core import admin_views as core_admin
 from categories import admin_views as cat_admin
 from products import admin_views as prod_admin
@@ -16,6 +16,8 @@ urlpatterns = [
     # Products
     path('products/', prod_admin.product_list, name='dashboard_products'),
     path('products/add/', prod_admin.product_add, name='add_product'),
+    path('products/edit/<int:pk>/', prod_admin.product_edit, name='edit_product'),
+    path('products/delete/<int:pk>/', prod_admin.product_delete, name='delete_product'),
     
     # API
     path('api/analytics/', core_admin.analytics_data, name='api_analytics'),

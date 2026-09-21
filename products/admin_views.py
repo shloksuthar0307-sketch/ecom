@@ -106,8 +106,25 @@ def product_add(request):
             
     categories = Category.objects.filter(level=0)
     brands = Brand.objects.all()
+    
+    # Pre-load subcategories and child categories for editing
+    subcategories = []
+    child_categories = []
+    
+    if product.category:
+        ancestors = product.category.get_ancestors(include_self=True)
+        if len(ancestors) >= 1:
+            root_cat = ancestors[0]
+            subcategories = root_cat.get_children()
+        if len(ancestors) >= 2:
+            sub_cat = ancestors[1]
+            child_categories = sub_cat.get_children()
+
     return render(request, 'dashboard/products/form.html', {
+        'product': product,
         'categories': categories,
+        'subcategories': subcategories,
+        'child_categories': child_categories,
         'brands': brands,
     })
 
@@ -120,3 +137,67 @@ def get_child_categories(request, parent_id):
         return JsonResponse({'children': list(children)})
     except Category.DoesNotExist:
         return JsonResponse({'children': []})
+
+@admin_required
+def product_edit(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        product.name = request.POST.get('name', product.name)
+        product.slug = request.POST.get('slug', product.slug)
+        product.sku = request.POST.get('sku', product.sku)
+        product.short_description = request.POST.get('short_description', product.short_description)
+        product.description = request.POST.get('description', product.description)
+        product.price = request.POST.get('price', product.price)
+        product.stock_quantity = request.POST.get('stock_quantity', product.stock_quantity)
+        product.status = request.POST.get('status', product.status)
+        product.visibility = request.POST.get('visibility', product.visibility)
+        
+        cat_id = request.POST.get('child_category') or request.POST.get('subcategory') or request.POST.get('category')
+        if cat_id:
+            product.category_id = cat_id
+            
+        brand_id = request.POST.get('brand')
+        if brand_id:
+            product.brand_id = brand_id
+            
+        product.save()
+        
+        # New images
+        for file in request.FILES.getlist('images'):
+            ProductImage.objects.create(product=product, image=file)
+            
+        messages.success(request, f"Product {product.name} updated successfully.")
+        return redirect('dashboard_products')
+        
+    categories = Category.objects.filter(level=0)
+    brands = Brand.objects.all()
+    
+    # Pre-load subcategories and child categories for editing
+    subcategories = []
+    child_categories = []
+    
+    if product.category:
+        ancestors = product.category.get_ancestors(include_self=True)
+        if len(ancestors) >= 1:
+            root_cat = ancestors[0]
+            subcategories = root_cat.get_children()
+        if len(ancestors) >= 2:
+            sub_cat = ancestors[1]
+            child_categories = sub_cat.get_children()
+
+    return render(request, 'dashboard/products/form.html', {
+        'product': product,
+        'categories': categories,
+        'subcategories': subcategories,
+        'child_categories': child_categories,
+        'brands': brands,
+    })
+
+@admin_required
+def product_delete(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        product.delete()
+        messages.success(request, "Product deleted successfully.")
+        return redirect('dashboard_products')
+    return render(request, 'dashboard/products/delete_confirm.html', {'product': product})
